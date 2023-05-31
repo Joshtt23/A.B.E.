@@ -16,9 +16,13 @@ def calculate_sentiment_metrics(ground_truth, predictions):
 def calculate_keyword_extraction_metrics(reference_keywords, extracted_keywords):
     flattened_reference_keywords = flatten_list(reference_keywords)
     flattened_extracted_keywords = flatten_list(extracted_keywords)
-    
+
+    if len(flattened_reference_keywords) != len(flattened_extracted_keywords):
+        raise ValueError("Found input variables with inconsistent numbers of samples")
+
     precision, recall, f1, _ = precision_recall_fscore_support(
-        flattened_reference_keywords, flattened_extracted_keywords, average=Config.KEYWORD_EXTRACTION_AVERAGE_STRATEGY, zero_division=1
+        flattened_reference_keywords, flattened_extracted_keywords,
+        average=Config.KEYWORD_EXTRACTION_AVERAGE_STRATEGY, zero_division=1
     )
 
     return precision, recall, f1

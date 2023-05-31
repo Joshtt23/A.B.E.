@@ -50,7 +50,6 @@ if __name__ == '__main__':
     start_time = time.time()
     analyzed_articles = ml_using_trnf(articles)
     logger.info("Analysis completed.")
-    logger.info(f"Analyzed articles: {analyzed_articles}")
     elapsed_time = time.time() - start_time
     logger.info(f"Analysis completed in {elapsed_time:.2f} seconds.")
 
@@ -83,7 +82,6 @@ if __name__ == '__main__':
         logger.error("Unable to calculate keyword extraction metrics. Key 'keywords_spacy' or 'keywords_rake' not found in analyzed articles.")
         keyword_extraction_metrics = None
 
-    logger.info(f"Analyzed articles: {analyzed_articles}")
     elapsed_time = time.time() - start_time
     logger.info(f"Keyword extraction metrics calculated in {elapsed_time:.2f} seconds.")
 
@@ -100,7 +98,6 @@ if __name__ == '__main__':
         logger.error("Unable to calculate summary generation metrics. Key 'summary_spacy' or 'summary_transformer' not found in analyzed articles.")
         summary_generation_metrics = None
 
-    logger.info(f"Analyzed articles: {analyzed_articles}")
     elapsed_time = time.time() - start_time
     logger.info(f"Summary generation metrics calculated in {elapsed_time:.2f} seconds.")
 

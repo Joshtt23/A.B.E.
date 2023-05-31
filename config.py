@@ -29,6 +29,7 @@ class Config:
     MAX_WORKERS = 4  # Set the desired number of maximum workers for ThreadPoolExecutor
     SPACY_MODEL = "en_core_web_trf" # Specify the Spacy model
     NUM_SENTENCES = 3 # Specify the number of sentences for summarization
+    NEWS_COUNT = 100 # Specify the number of news articles to fetch
     EXCLUDE_LIST = [
         "error",
         "access denied",

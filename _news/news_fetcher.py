@@ -12,7 +12,7 @@ def fetch_news():
     headers = {"Ocp-Apim-Subscription-Key": Config.API_KEY}
     params = {
         "q": Config.SEARCH_TERM,
-        "count": 10,
+        "count": Config.NEWS_COUNT,
         "freshness": "Day",
         "textFormat": "Raw"
     }
