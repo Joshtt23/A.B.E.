@@ -1,0 +1,12 @@
+beautifulsoup4
+bs4
+gensim
+langdetect
+nltk
+numpy
+requests
+spacy
+spacytextblob
+validators
+yake
+scikit-learn
