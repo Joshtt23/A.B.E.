@@ -32,21 +32,24 @@ The application consists of the following components:
 To install and run the News ML application, follow these steps:
 
 1. Clone the repository: `git clone https://github.com/your-username/news-ml.git`
-2. Install the required dependencies: `pip install -r requirements.txt`
+2. Run News ML.bat as an administrator.
+   - The installation script will automatically create a virtual environment (venv) and install all the required dependencies.
 
 ## Usage
 
-To use the News ML application, you need to provide your API key for the Microsoft Bing News Search API. Replace `'YOUR_API_KEY'` in `config.py` with your actual API key.
+To use the News ML application, follow these steps:
 
-After configuring the API key, you can run the application by executing `main.py`.
-
-`python main.py`
-
-The application will fetch news articles, process them, perform analysis, and calculate metrics. The analyzed articles and metrics will be saved in `result.json`.
+1. Run News ML.bat as an administrator.
+   - If prompted, grant administrator privileges to the script.
+   - The application will start automatically once the administrator check is successful.
+2. Complete tasks using the user interface:
+   - The application will fetch news articles, process them, perform analysis, and calculate metrics.
+   - The analyzed articles and metrics will be saved in `result.json`.
+   - Note: It is important to run News ML.bat as an administrator to ensure the application functions correctly.
 
 ## Files
 
-The News ML application consists of the following files:
+The News ML application consists of the following files and folders:
 
 - `main.py`: The entry point of the application.
 - `config.py`: Configuration settings for the application.
@@ -59,6 +62,19 @@ The News ML application consists of the following files:
 - `sentiment_classifier.py`: Classifies the sentiment of text using machine learning models.
 - `keyword_extractor.py`: Extracts keywords from text using various algorithms.
 - `summary_generator.py`: Generates summaries of text using machine learning models.
+- `tnt/`: Folder containing test and train scripts.
+  - `ner/`: Folder for named entity recognition (NER) tasks.
+    - `test.py`: Script for running NER tests.
+    - `train.py`: Script for training NER models.
+  - `sentiment_analysis/`: Folder for sentiment analysis tasks.
+    - `test.py`: Script for running sentiment analysis tests.
+    - `train.py`: Script for training sentiment analysis models.
+  - `summary_generation/`: Folder for summary generation tasks.
+    - `test.py`: Script for running summary generation tests.
+    - `train.py`: Script for training summary generation models.
+- `run.py`: Script to run the application's user interface (UI).
+- `News ML.bat`: Batch file to start the application automatically.
+- `result.json`: JSON file to store the analyzed articles and metrics.
 - `README.md`: This file.
 
 ## Contributing

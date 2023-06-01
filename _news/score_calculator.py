@@ -18,7 +18,11 @@ def calculate_keyword_extraction_metrics(reference_keywords, extracted_keywords)
     flattened_extracted_keywords = flatten_list(extracted_keywords)
 
     if len(flattened_reference_keywords) != len(flattened_extracted_keywords):
-        raise ValueError("Found input variables with inconsistent numbers of samples")
+        # Pad the shorter list with a placeholder value to align the lengths
+        max_length = max(len(flattened_reference_keywords), len(flattened_extracted_keywords))
+        placeholder = "<PAD>"
+        flattened_reference_keywords += [placeholder] * (max_length - len(flattened_reference_keywords))
+        flattened_extracted_keywords += [placeholder] * (max_length - len(flattened_extracted_keywords))
 
     precision, recall, f1, _ = precision_recall_fscore_support(
         flattened_reference_keywords, flattened_extracted_keywords,

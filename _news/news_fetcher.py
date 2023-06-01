@@ -1,4 +1,4 @@
-# _news/news_fetcher.py
+import datetime
 from config import Config
 import requests
 import logging
@@ -11,11 +11,16 @@ def fetch_news():
 
     headers = {"Ocp-Apim-Subscription-Key": Config.API_KEY}
     params = {
-        "q": Config.SEARCH_TERM,
-        "count": Config.NEWS_COUNT,
-        "freshness": "Day",
-        "textFormat": "Raw"
-    }
+    "q": Config.SEARCH_TERM,
+    "count": Config.NEWS_COUNT,
+    "freshness": "Day",
+    "textFormat": "Raw",
+    "category": "Business",  # Set category to business or finance
+    "sortBy": "Date",  # Sort articles by date
+    "mkt": "en-US",  # Set market to English (United States)
+    "since": (datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),  # Set the "since" parameter to retrieve articles posted in the last 24 hours
+}
+
 
     try:
         with requests.Session() as session:
