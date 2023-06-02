@@ -24,7 +24,12 @@ HEADERS = {
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("analysis.log"),  # Log messages to a file
+        logging.StreamHandler(),  # Log messages to the console
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -54,7 +59,9 @@ class LoadingBar(tk.Tk):
     def increment_current_stage(self):
         self.current_stage += 1
         progress = (self.current_stage / self.total_stages) * 100
-        self.update_progress(progress, f"Processing article {self.current_stage}/{self.total_stages}")
+        self.update_progress(
+            progress, f"Processing article {self.current_stage}/{self.total_stages}"
+        )
 
     def update_total_stages(self, total_stages):
         self.total_stages = total_stages
@@ -100,7 +107,9 @@ def perform_live_analysis(loading_bar=None):
             if loading_bar:
                 loading_bar.increment_current_stage()
             logger.info(f"Processing article {i + 1}/{len(cleaned_urls)}")
-            article = scrape_and_process(url, headers=HEADERS, exclude_list=EXCLUDE_LIST)
+            article = scrape_and_process(
+                url, headers=HEADERS, exclude_list=EXCLUDE_LIST
+            )
             if article is not None:
                 articles.append(article)
 
@@ -184,6 +193,7 @@ def perform_live_analysis(loading_bar=None):
         logger.info("Analysis complete.")
     except tk.TclError:
         logger.info("Analysis paused. Click 'Resume' to continue.")
+
 
 def run_with_gui(loading_bar):
     loading_bar.update_progress(0, "Initializing...")

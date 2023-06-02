@@ -10,3 +10,5 @@ spacytextblob
 validators
 yake
 scikit-learn
+xformers
+memory-profiler

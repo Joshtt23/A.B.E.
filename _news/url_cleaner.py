@@ -1,6 +1,7 @@
 # _news/url_cleaner.py
 from urllib.parse import urlparse, urlunparse, unquote
 import validators
+import logging
 
 def clean_urls(urls):
     """
@@ -35,4 +36,5 @@ def clean_urls(urls):
             )
         )
     ]
+    logging.info("URL cleaning and validation completed.")
     return cleaned_urls

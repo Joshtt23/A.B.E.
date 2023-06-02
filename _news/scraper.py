@@ -5,7 +5,6 @@ import logging
 from langdetect import detect
 import re
 
-
 def scrape_and_process(url, headers, exclude_list):
     """
     Scrapes and processes the content of a given URL.
@@ -46,6 +45,7 @@ def scrape_and_process(url, headers, exclude_list):
             # Language filtering
             detected_lang = detect(article)
             if detected_lang != "en":
+                logging.warning(f"Detected language is {detected_lang}, skipping URL: {url}")
                 return None
             
             # Clean and preprocess the article text
@@ -53,8 +53,10 @@ def scrape_and_process(url, headers, exclude_list):
             
             # Exclude articles containing specific phrases
             if any(exclude in article for exclude in exclude_list) or len(article) <= 50:
+                logging.warning(f"Excluded URL due to specific phrases or short length: {url}")
                 return None
             
+            logging.info(f"Scraping and processing of URL successful: {url}")
             return {"url": url, "article": article}
         
     except requests.exceptions.RequestException as e:

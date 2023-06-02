@@ -17,9 +17,9 @@ class Config:
     NER_MODEL = (
         "dbmdz/bert-large-cased-finetuned-conll03-english"  # Transformer model for NER
     )
-    SUMMARY_MODEL = "t5-large"  # Transformer model for summary generation
+    SUMMARY_MODEL = "t5-base"  # Transformer model for summary generation
     SPACY_POS_TAGS = ["NOUN", "PROPN"]
-    NER_DEVICE = 0 if torch.cuda.is_available() else -1
+    DEVICE_CUDA = 0 if torch.cuda.is_available() else -1
     HUGGINGFACE_ENTITY_TYPE = "MISC"
     KEYWORDS_LIMIT = 10
     LOG_LEVEL = "INFO"
@@ -31,7 +31,7 @@ class Config:
     MAX_WORKERS = 4
     SPACY_MODEL = "en_core_web_trf"
     NUM_SENTENCES = 4
-    NEWS_COUNT = 100
+    NEWS_COUNT = 10
     EXCLUDE_LIST = [
         "error",
         "access denied",

@@ -21,7 +21,6 @@ def fetch_news():
     "since": (datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%Y-%m-%d"),  # Set the "since" parameter to retrieve articles posted in the last 24 hours
 }
 
-
     try:
         with requests.Session() as session:
             response = session.get(url, headers=headers, params=params)
@@ -29,6 +28,7 @@ def fetch_news():
             news = response.json()
 
             urls = [article["url"] for article in news["value"]]
+            logging.info("News fetch successful.")
             return urls
     except requests.exceptions.HTTPError as e:
         logging.error(f"HTTP error occurred: {str(e)}, Status code: {response.status_code}")

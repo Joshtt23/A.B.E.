@@ -99,3 +99,12 @@ Contributions to the News ML project are welcome! If you have any ideas, improve
 ## License
 
 The News ML project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+
+
+In this updated code:
+
+The target_ratio parameter is introduced to control the desired ratio of the summary length to the input length. The default value is set to 1/3.
+The max_summary_length parameter can still be used to set an upper limit on the summary length. If not provided, it falls back to the Config.MAX_SUMMARY_LENGTH value.
+If the input length is within the Config.MAX_SECTION_LENGTH, the summary length is determined based on the target_ratio and limited by the max_summary_length.
+For inputs longer than Config.MAX_SECTION_LENGTH, the input is divided into chunks and summaries are generated for each chunk. The summary length for each chunk is determined based on the chunk length and limited by the target_ratio and max_summary_length.
+The individual chunk summaries are joined together to form the final summary.
