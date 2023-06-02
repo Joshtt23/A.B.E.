@@ -13,13 +13,13 @@ class Config:
     YAKE_MAX_NGRAMS = 3
     API_KEY = "1d5cf60e30a349a08453563a05adbc1d"
     SEARCH_TERM = "crypto stock market news"
-    SENTIMENT_ANALYSIS_MODEL = "roberta-large-mnli"
+    SENTIMENT_ANALYSIS_MODEL = "distilbert-base-uncased-finetuned-sst-2-english"
     NER_MODEL = (
-        "dbmdz/bert-large-cased-finetuned-conll03-english"  # Transformer model for NER
+        "dslim/bert-base-NER"  # Transformer model for NER
     )
-    SUMMARY_MODEL = "t5-base"  # Transformer model for summary generation
+    SUMMARY_MODEL = "google/pegasus-xsum"  # Transformer model for summary generation
     SPACY_POS_TAGS = ["NOUN", "PROPN"]
-    DEVICE_CUDA = 0 if torch.cuda.is_available() else -1
+    DEVICE_CUDA = -1
     HUGGINGFACE_ENTITY_TYPE = "MISC"
     KEYWORDS_LIMIT = 10
     LOG_LEVEL = "INFO"

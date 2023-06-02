@@ -8,6 +8,7 @@ import torch
 from PIL import ImageTk, Image
 from main import run_with_gui, LoadingBar
 from config import Config
+from inspect import getattr_static, isclass
 
 
 class GpuSelector:
@@ -321,7 +322,7 @@ class ConfigForm:
                 label.grid(row=row, column=0)
 
                 entry = tk.Entry(scrollable_frame)
-                entry.insert(0, str(getattr(self.config, var)))
+                entry.insert(0, str(getattr_static(self.config, var)))
                 entry.grid(row=row, column=1)
 
                 self.entries[var] = entry
@@ -337,6 +338,16 @@ class ConfigForm:
     def submit(self):
         for var, entry in self.entries.items():
             setattr(self.config, var, eval(entry.get()))
+
+        # Save the updated configuration to the config.py file
+        with open("config.py", "w") as file:
+            file.write(f"class Config:\n")
+            for var, entry in self.entries.items():
+                value = entry.get()
+                if isinstance(eval(value), str):
+                    file.write(f'    {var} = "{value}"\n')
+                else:
+                    file.write(f"    {var} = {value}\n")
 
         self.master.destroy()
 
