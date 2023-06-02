@@ -1,19 +1,19 @@
 import tkinter as tk
-from tkinter import messagebox
-import importlib
-import glob
-import unittest
+from tkinter import ttk
 import json
 import time
 import logging
-from tkinter import ttk
-
+import os
+from config import Config
 from _news.news_fetcher import fetch_news
 from _news.url_cleaner import clean_urls
 from _news.scraper import scrape_and_process
 from _news.analyzer import ml_using_trnf
-from _news.score_calculator import calculate_sentiment_metrics, calculate_keyword_extraction_metrics, calculate_summary_generation_metrics
-from config import Config
+from _news.score_calculator import (
+    calculate_sentiment_metrics,
+    calculate_keyword_extraction_metrics,
+    calculate_summary_generation_metrics,
+)
 
 EXCLUDE_LIST = Config.EXCLUDE_LIST
 
@@ -23,144 +23,195 @@ HEADERS = {
 }
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
-class LoadingBar:
-    def __init__(self, total):
-        self.root = tk.Tk()
-        self.root.title("Live Analysis Progress")
-        self.progress_bar = ttk.Progressbar(self.root, length=300, mode='determinate', maximum=total)
+
+class LoadingBar(tk.Tk):
+    def __init__(self, total_stages, icon_path):
+        super().__init__()
+        self.title("Live Analysis Progress")
+        self.set_window_icon(icon_path)
+
+        self.progress_bar = ttk.Progressbar(
+            self, length=300, mode="determinate", maximum=100
+        )
         self.progress_bar.pack(pady=10)
-        self.progress_label = tk.Label(self.root, text="Initializing...")
+        self.progress_label = tk.Label(self, text="Initializing...")
         self.progress_label.pack(pady=5)
 
-        self.cancel_button = tk.Button(self.root, text="Cancel", width=10, command=self.cancel_analysis)
-        self.cancel_button.pack(pady=5)
-
         self.cancelled = False
+        self.total_stages = total_stages
+        self.current_stage = 0
 
-    def update_progress(self, current, total, message):
-        if not self.cancelled:
-            self.progress_bar["value"] = current  # Update the current progress
-            self.progress_label.config(text=message)
-            self.root.update()  # Update the Tkinter window
+    def update_progress(self, progress, message):
+        self.progress_bar["value"] = progress
+        self.progress_label.config(text=message)
+        self.update()
+
+    def increment_current_stage(self):
+        self.current_stage += 1
+        progress = (self.current_stage / self.total_stages) * 100
+        self.update_progress(progress, f"Processing article {self.current_stage}/{self.total_stages}")
+
+    def update_total_stages(self, total_stages):
+        self.total_stages = total_stages
 
     def cancel_analysis(self):
         self.cancelled = True
+        self.destroy()
 
-    def run(self):
-        self.root.mainloop()
+    def set_window_icon(self, icon_path):
+        icon_path = os.path.join(os.path.dirname(__file__), icon_path)
+        if os.path.exists(icon_path):
+            self.iconbitmap(icon_path)
 
-def run_live_analysis():
-    # Fetch news articles
-    logger.info("Fetching news articles...")
-    start_time = time.time()
-    raw_urls = fetch_news()
-    logger.info(f"Fetched {len(raw_urls)} news articles.")
-    total_urls = len(raw_urls)
 
-    total_stages = total_urls + 4  # We have total_urls number of articles to process, and then 4 additional stages
-
-    # Initialize loading bar
-    loading_bar = LoadingBar(total=total_stages)
-
-    # Clean and validate URLs
-    loading_bar.update_progress(0, total_stages, "Cleaning and validating URLs...")
-    logger.info("Cleaning and validating URLs...")
-    cleaned_urls = clean_urls(raw_urls)
-    logger.info(f"Cleaned and validated {len(cleaned_urls)} URLs.")
-
-    # Scrape and process articles
-    articles = []
-    for i, url in enumerate(cleaned_urls):
-        if loading_bar.cancelled:
-            logger.info("Analysis cancelled.")
+def perform_live_analysis(loading_bar):
+    try:
+        # Fetch news articles
+        logger.info("Fetching news articles...")
+        raw_urls = fetch_news()
+        if loading_bar and loading_bar.cancelled:
             return
-        loading_bar.update_progress(i+1, total_stages, f"Processing article {i+1}/{len(cleaned_urls)}")
-        logger.info(f"Processing article {i+1}/{len(cleaned_urls)}")
-        article = scrape_and_process(url, headers=HEADERS, exclude_list=EXCLUDE_LIST)
-        if article is not None:
-            articles.append(article)
+        logger.info(f"Fetched {len(raw_urls)} news articles.")
 
-    # Perform analysis on articles
-    loading_bar.update_progress(total_urls + 1, total_stages, "Performing analysis on articles...")
-    logger.info("Performing analysis on articles...")
-    start_time = time.time()
-    analyzed_articles = ml_using_trnf(articles)
-    logger.info("Analysis completed.")
-    elapsed_time = time.time() - start_time
-    logger.info(f"Analysis completed in {elapsed_time:.2f} seconds.")
+        if loading_bar:
+            loading_bar.update_progress(0, "Cleaning and validating URLs...")
 
-    # Calculate sentiment metrics
-    loading_bar.update_progress(total_urls + 2, total_stages, "Calculating sentiment metrics...")
-    logger.info("Calculating sentiment metrics...")
-    start_time = time.time()
-    ground_truth_sentiment = [article['sentiment_spacy']['polarity'] for article in analyzed_articles.values()]
-    predicted_sentiment = [article['sentiment_transformer'] for article in analyzed_articles.values()]
+        # Clean and validate URLs
+        logger.info("Cleaning and validating URLs...")
+        cleaned_urls = clean_urls(raw_urls)
+        if loading_bar and loading_bar.cancelled:
+            return
+        logger.info(f"Cleaned and validated {len(cleaned_urls)} URLs.")
 
-    # Convert sentiment scores to categories
-    threshold = 0.2  # Adjust the threshold as needed
-    ground_truth_categories = ['Positive' if s > threshold else 'Negative' if s < -threshold else 'Neutral' for s in ground_truth_sentiment]
-    predicted_categories = ['Positive' if s > threshold else 'Negative' if s < -threshold else 'Neutral' for s in predicted_sentiment]
+        # Update total stages in loading bar
+        loading_bar.update_total_stages(len(cleaned_urls))
 
-    sentiment_metrics = calculate_sentiment_metrics(ground_truth_categories, predicted_categories)
-    logger.info("Sentiment metrics calculated.")
-    elapsed_time = time.time() - start_time
-    logger.info(f"Sentiment metrics calculated in {elapsed_time:.2f} seconds.")
+        # Scrape and process articles
+        articles = []
+        for i, url in enumerate(cleaned_urls):
+            if loading_bar and loading_bar.cancelled:
+                return
+            if loading_bar:
+                loading_bar.increment_current_stage()
+            logger.info(f"Processing article {i + 1}/{len(cleaned_urls)}")
+            article = scrape_and_process(
+                url, headers=HEADERS, exclude_list=EXCLUDE_LIST
+            )
+            if article is not None:
+                articles.append(article)
 
-    # Calculate keyword extraction metrics
-    loading_bar.update_progress(total_urls + 3, total_stages, "Calculating keyword extraction metrics...")
-    logger.info("Calculating keyword extraction metrics...")
-    start_time = time.time()
+        if loading_bar:
+            loading_bar.update_progress(100, "Performing analysis on articles...")
+        logger.info("Performing analysis on articles...")
+        analyzed_articles = ml_using_trnf(articles)
+        if loading_bar and loading_bar.cancelled:
+            return
+        logger.info("Analysis completed.")
 
-    try:
-        reference_keywords = [article['keywords_spacy'] for article in analyzed_articles.values()]
-        extracted_keywords = [article['keywords_rake'] for article in analyzed_articles.values()]
-        keyword_extraction_metrics = calculate_keyword_extraction_metrics(reference_keywords, extracted_keywords)
-        logger.info("Keyword extraction metrics calculated.")
-    except KeyError:
-        logger.error("Unable to calculate keyword extraction metrics. Key 'keywords_spacy' or 'keywords_rake' not found in analyzed articles.")
-        keyword_extraction_metrics = None
+        # Calculate sentiment metrics
+        logger.info("Calculating sentiment metrics...")
+        ground_truth_sentiment = [
+            article["sentiment_spacy"]["polarity"]
+            for article in analyzed_articles.values()
+        ]
+        predicted_sentiment = [
+            article["sentiment_transformer"] for article in analyzed_articles.values()
+        ]
 
-    elapsed_time = time.time() - start_time
-    logger.info(f"Keyword extraction metrics calculated in {elapsed_time:.2f} seconds.")
+        threshold = 0.2
+        sentiment_metrics = calculate_sentiment_metrics(
+            ground_truth_sentiment, predicted_sentiment, threshold
+        )
+        logger.info("Sentiment metrics calculated.")
 
-    # Calculate summary generation metrics
-    loading_bar.update_progress(total_urls + 4, total_stages, "Calculating summary generation metrics...")
-    logger.info("Calculating summary generation metrics...")
-    start_time = time.time()
+        # Calculate keyword extraction metrics
+        logger.info("Calculating keyword extraction metrics...")
+        try:
+            reference_keywords = [
+                article["keywords_spacy"] for article in analyzed_articles.values()
+            ]
+            extracted_keywords = [
+                article["keywords_rake"] for article in analyzed_articles.values()
+            ]
+            keyword_extraction_metrics = calculate_keyword_extraction_metrics(
+                reference_keywords, extracted_keywords
+            )
+            logger.info("Keyword extraction metrics calculated.")
+        except KeyError:
+            logger.error(
+                "Unable to calculate keyword extraction metrics. Key 'keywords_spacy' or 'keywords_rake' not found in analyzed articles."
+            )
+            keyword_extraction_metrics = None
 
-    try:
-        reference_summaries = [article['summary_spacy'] for article in analyzed_articles.values()]
-        generated_summaries = [article['summary_transformer'] for article in analyzed_articles.values()]
-        summary_generation_metrics = calculate_summary_generation_metrics(reference_summaries, generated_summaries)
-        logger.info("Summary generation metrics calculated.")
-    except KeyError:
-        logger.error("Unable to calculate summary generation metrics. Key 'summary_spacy' or 'summary_transformer' not found in analyzed articles.")
-        summary_generation_metrics = None
+        # Calculate summary generation metrics
+        logger.info("Calculating summary generation metrics...")
+        try:
+            reference_summaries = [
+                article["summary_spacy"] for article in analyzed_articles.values()
+            ]
+            generated_summaries = [
+                article["summary_transformer"] for article in analyzed_articles.values()
+            ]
+            summary_generation_metrics = calculate_summary_generation_metrics(
+                reference_summaries, generated_summaries
+            )
+            logger.info("Summary generation metrics calculated.")
+        except KeyError:
+            logger.error(
+                "Unable to calculate summary generation metrics. Key 'summary_spacy' or 'summary_transformer' not found in analyzed articles."
+            )
+            summary_generation_metrics = None
 
-    elapsed_time = time.time() - start_time
-    logger.info(f"Summary generation metrics calculated in {elapsed_time:.2f} seconds.")
+        # Store metrics in a dictionary
+        metrics = {
+            "sentiment_metrics": sentiment_metrics,
+            "keyword_extraction_metrics": keyword_extraction_metrics,
+            "summary_generation_metrics": summary_generation_metrics,
+        }
 
-    # Store metrics in a dictionary
-    metrics = {
-        'sentiment_metrics': sentiment_metrics,
-        'keyword_extraction_metrics': keyword_extraction_metrics,
-        'summary_generation_metrics': summary_generation_metrics
-    }
+        # Write the analyzed articles and metrics to result.json
+        result = {"analyzed_articles": analyzed_articles, "metrics": metrics}
 
-    # Write the analyzed articles and metrics to result.json
-    result = {
-        'analyzed_articles': analyzed_articles,
-        'metrics': metrics
-    }
+        with open("result.json", "w") as f:
+            json.dump(result, f)
 
-    with open('result.json', 'w') as f:
-        json.dump(result, f)
+        if loading_bar:
+            loading_bar.update_progress(100, "Analysis complete.")
+        logger.info("Analysis complete.")
+    except tk.TclError:
+        logger.info("Analysis paused. Click 'Resume' to continue.")
 
-    loading_bar.update_progress(total_stages, total_stages, "Analysis complete.")
-    logger.info("Analysis complete.")
 
-if __name__ == '__main__':
-    run_live_analysis()
+def run_with_gui(loading_bar):
+    loading_bar.update_progress(0, "Initializing...")
+    loading_bar.cancelled = False
+
+    def on_cancel():
+        loading_bar.cancel_analysis()
+
+    def on_resume():
+        loading_bar.resume_analysis()
+
+    cancel_button = tk.Button(loading_bar, text="Cancel", width=10, command=on_cancel)
+    cancel_button.pack(pady=5)
+
+    resume_button = tk.Button(loading_bar, text="Resume", width=10, command=on_resume)
+    resume_button.pack(pady=5)
+    resume_button.pack_forget()
+
+    loading_bar.protocol("WM_DELETE_WINDOW", on_cancel)
+    loading_bar.resizable(False, False)
+    loading_bar.update_progress(0, "Fetching news articles...")
+    perform_live_analysis(loading_bar)
+
+    loading_bar.mainloop()
+
+
+if __name__ == "__main__":
+    loading_bar = LoadingBar(total_stages=0, icon_path="favicon.ico")
+    run_with_gui(loading_bar)

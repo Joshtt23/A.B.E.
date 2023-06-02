@@ -1,7 +1,8 @@
 import torch
+from pathlib import Path
+
 
 class Config:
-
     RAKE_MIN_LENGTH = 1
     RAKE_MAX_LENGTH = 3
     RAKE_STOPWORDS = None
@@ -10,10 +11,12 @@ class Config:
     SENTIMENT_LABELS = ["Negative", "Positive", "Neutral"]
     YAKE_LANGUAGE = "en"
     YAKE_MAX_NGRAMS = 3
-    API_KEY = '1d5cf60e30a349a08453563a05adbc1d'
-    SEARCH_TERM = 'crypto stock market news'
+    API_KEY = "1d5cf60e30a349a08453563a05adbc1d"
+    SEARCH_TERM = "crypto stock market news"
     SENTIMENT_ANALYSIS_MODEL = "roberta-large-mnli"
-    NER_MODEL = "dbmdz/bert-large-cased-finetuned-conll03-english"  # Transformer model for NER
+    NER_MODEL = (
+        "dbmdz/bert-large-cased-finetuned-conll03-english"  # Transformer model for NER
+    )
     SUMMARY_MODEL = "t5-large"  # Transformer model for summary generation
     SPACY_POS_TAGS = ["NOUN", "PROPN"]
     NER_DEVICE = 0 if torch.cuda.is_available() else -1
@@ -52,6 +55,8 @@ class Config:
     SENTIMENT_AVERAGE_STRATEGY = "macro"
     KEYWORD_EXTRACTION_AVERAGE_STRATEGY = "macro"
     SUMMARY_GENERATION_AVERAGE_STRATEGY = "macro"
-    TRAIN_DATA_CSV = 'tnt/data.csv'
-    SAVED_MODEL_DIR = 'saved_model'
+    DATA_CSV = str(Path(__file__).resolve().parent / "data.csv")
+    SAVED_MODEL_DIR = "saved_model"
     LEARNING_RATE = 1e-5
+    NUM_EPOCHS = 10  # Number of training epochs
+    SERVER_INTERVAL = 60  # Interval in seconds

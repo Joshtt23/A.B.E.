@@ -1,39 +1,54 @@
 import unittest
-import pandas as pd
-from transformers import AutoModelForTokenClassification, AutoTokenizer
+from transformers import pipeline
+import csv
+from config import Config
 
-from tnt.ner import preprocess_text, extract_entities, evaluate_entities
 
-class NERTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # Load the trained model and tokenizer
-        cls.model = AutoModelForTokenClassification.from_pretrained('dbmdz/bert-large-cased-finetuned-conll03-english')
-        cls.tokenizer = AutoTokenizer.from_pretrained('dbmdz/bert-large-cased-finetuned-conll03-english')
+class SummaryGenerationTestCase(unittest.TestCase):
 
-    def test_extract_entities(self):
-        # Test a specific example
-        text = "Apple Inc. is a technology company based in California."
-        expected_entities = ["Apple Inc.", "California"]
-        preprocessed_text = preprocess_text(text)
-        entities = extract_entities(self.model, self.tokenizer, preprocessed_text)
-        self.assertEqual(entities, expected_entities)
+    def load_data_from_csv(self, file_path):
+        data = []
+        with open(file_path, "r", encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                data.append(row)
+        return data
 
-    def test_evaluate_entities(self):
-        # Load the test data from CSV
-        test_data = pd.read_csv('tnt/data.csv')
+    def test_summary_generation(self):
+        config = Config()
 
-        # Extract the required columns from the CSV data
-        texts = test_data['text']
-        expected_entities = test_data['label_entity']
+        # Load the test data
+        data = self.load_data_from_csv(config.DATA_CSV)
+
+        # Load the trained model
+        summarizer = pipeline(
+            "summarization",
+            model=config.SAVED_MODEL_DIR,
+            tokenizer=config.SUMMARY_MODEL,
+            framework="pt",
+        )
 
         # Evaluate the model on the test data
-        accuracy = evaluate_entities(texts, expected_entities, self.model, self.tokenizer)
+        for example in data:
+            text = example["text"]
+            true_summary = example["summary"]
 
-        # Assert that accuracy is within a reasonable range
-        self.assertGreaterEqual(accuracy, 0.0)
-        self.assertLessEqual(accuracy, 1.0)
+            # Generate the summary
+            result = summarizer(
+                text,
+                max_length=config.MAX_SUMMARY_LENGTH,
+                min_length=config.MIN_LENGTH,
+                do_sample=False,
+            )
+            generated_summary = result[0]["summary_text"]
+
+            # Compare the true summary and the generated summary
+            self.assertEqual(generated_summary, true_summary)
 
 
-if __name__ == '__main__':
+def run_tests():
     unittest.main()
+
+
+if __name__ == "__main__":
+    run_tests()

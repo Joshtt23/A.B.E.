@@ -21,7 +21,7 @@ if exist "%WORKING_DIR%\venv\Scripts\activate.bat" (
 )
 
 REM Run the Python script
-python "%WORKING_DIR%\run.py"
+python "%WORKING_DIR%\run-server.py"
 
 REM Deactivate the virtual environment if present
 if exist "%WORKING_DIR%\venv\Scripts\deactivate.bat" (

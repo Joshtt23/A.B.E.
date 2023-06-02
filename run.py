@@ -1,16 +1,21 @@
+import os
+import shutil
+import subprocess
 import tkinter as tk
+from tkinter import filedialog
 from tkinter import messagebox
-import importlib
 import torch
+from PIL import ImageTk, Image
+from main import run_with_gui, LoadingBar
 from config import Config
 
 
 class GpuSelector:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("GPU Selection")
+    def __init__(self, root):
+        self.root = root
         self.gpu_var = tk.StringVar(self.root)
         self.gpu_menu = None
+        self.popup = None
 
     def select_gpu(self):
         if torch.cuda.is_available():
@@ -18,101 +23,66 @@ class GpuSelector:
             if gpu_count > 0:
                 self.create_gpu_selection_box(gpu_count)
             else:
-                messagebox.showwarning("GPU Selection", "No GPUs available.")
+                self.show_popup("No GPUs available. CUDA is not available.")
         else:
-            messagebox.showwarning("GPU Selection", "CUDA is not available.")
+            self.show_popup("CUDA is not available.")
 
     def create_gpu_selection_box(self, gpu_count):
-        label = tk.Label(self.root, text="Select GPU:")
+        self.popup = tk.Toplevel(self.root)
+        self.popup.title("Select GPU")
+        self.set_window_icon(self.popup)
+
+        label = tk.Label(self.popup, text="Select GPU:")
         label.pack(pady=10)
 
         self.gpu_var.set(
             torch.cuda.get_device_name(0)
         )  # Default selection is the first GPU
         self.gpu_menu = tk.OptionMenu(
-            self.root,
+            self.popup,
             self.gpu_var,
             *[torch.cuda.get_device_name(i) for i in range(gpu_count)],
         )
         self.gpu_menu.pack(pady=5)
 
         confirm_button = tk.Button(
-            self.root, text="Confirm", command=self.confirm_selection
+            self.popup, text="Confirm", command=self.confirm_selection
         )
         confirm_button.pack(pady=5)
+
+        cancel_button = tk.Button(
+            self.popup, text="Cancel", command=self.cancel_selection
+        )
+        cancel_button.pack(pady=5)
 
     def confirm_selection(self):
         selected_gpu = self.gpu_var.get()
         device_id = [
-            torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())
-        ].index(selected_gpu)
+            i
+            for i in range(torch.cuda.device_count())
+            if torch.cuda.get_device_name(i) == selected_gpu
+        ][0]
         torch.cuda.set_device(device_id)
-        messagebox.showinfo("GPU Selection", f"Using GPU: {selected_gpu}")
-        self.root.destroy()
+        self.show_popup(f"Using GPU: {selected_gpu}")
+        self.popup.destroy()
 
-    def run(self):
-        self.root.mainloop()
+    def cancel_selection(self):
+        self.popup.destroy()
 
+    def show_popup(self, message):
+        messagebox.showinfo("GPU Selection", message)
 
-class SettingsGUI:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("Settings")
-        self.frame = tk.Frame(self.root)
-        self.frame.pack()
-        self.canvas = tk.Canvas(self.frame)
-        self.scrollbar = tk.Scrollbar(
-            self.frame, orient="vertical", command=self.canvas.yview
-        )
-        self.scrollable_frame = tk.Frame(self.canvas)
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")),
-        )
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
-
-    def create_label_entry(self, text, default_value):
-        label = tk.Label(self.scrollable_frame, text=text)
-        label.pack(pady=5)
-        entry_var = tk.StringVar(self.scrollable_frame, value=str(default_value))
-        entry = tk.Entry(self.scrollable_frame, textvariable=entry_var, width=30)
-        entry.pack(pady=5)
-        return entry_var
-
-    def save_settings(self):
-        for option, entry_var in self.config_entries.items():
-            setattr(Config, option, entry_var.get())
-        messagebox.showinfo("Settings", "Settings saved successfully.")
-        self.root.destroy()
-
-    def run(self):
-        self.config_entries = {}
-
-        num_columns = max(len(Config.__dict__) // 2, 1)
-        grid_options = {"sticky": "w", "padx": 5, "pady": 5}
-
-        i = 0
-        for option, default_value in Config.__dict__.items():
-            if not option.startswith("__"):
-                entry_var = self.create_label_entry(option, default_value)
-                self.config_entries[option] = entry_var
-                i += 1
-
-        save_button = tk.Button(
-            self.scrollable_frame, text="Save", command=self.save_settings
-        )
-        save_button.pack(pady=5)
-
-        self.root.mainloop()
+    def set_window_icon(self, window):
+        icon_path = os.path.join(os.path.dirname(__file__), "favicon.ico")
+        if os.path.exists(icon_path):
+            window.iconbitmap(icon_path)
 
 
 class OptionsGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("News ML")
+        self.set_window_icon()
 
         self.title_label = tk.Label(
             self.root, text="News ML powered by ABE", font=("Arial", 16, "bold")
@@ -120,7 +90,15 @@ class OptionsGUI:
         self.cuda_label = None
         self.availability_label = None
 
-        self.buttons = {"Run Test": [], "Run Training": [], "Run Live Analysis": []}
+        self.buttons = {
+            "Run Test": [],
+            "Run Training": [],
+            "Run Live Analysis": [],
+            "Import Data File": [],  # Added the Import Data File button
+        }
+
+        # Store the subprocesses for later termination
+        self.subprocesses = []
 
     def create_label(self, text, font=("Arial", 14, "bold"), fg="black"):
         label = tk.Label(self.root, text=text, font=font, fg=fg)
@@ -138,29 +116,122 @@ class OptionsGUI:
 
     def on_button_click(self, option, module):
         if option == "Run Test":
-            self.run_tests(module)
+            self.run_tests(f"tnt.{module}")
         elif option == "Run Training":
-            self.run_train(module)
+            self.run_train(f"tnt.{module}")
         elif option == "Run Live Analysis":
             self.run_live_analysis()
+        elif option == "Import Data File":  # Added the Import Data File option
+            self.import_data_file()
 
     def run_tests(self, module):
-        test_module = f"tnt.{module}.test"
         try:
-            test = importlib.import_module(test_module)
-            test.run_tests()
-        except ImportError:
-            messagebox.showerror("Error", f"Cannot import test module for {module}")
+            script_path = os.path.join(
+                os.path.dirname(__file__), module.replace(".", "/"), "test.py"
+            )
+            process = subprocess.Popen(["python", script_path])
+            self.subprocesses.append(process)
+            self.show_popup("Tests started successfully.")
+        except Exception as e:
+            self.show_popup(
+                f"An error occurred while starting tests:\n\n{str(e)}", error=True
+            )
 
     def run_train(self, module):
-        train_module = f"tnt.{module}.train"
         try:
-            train = importlib.import_module(train_module)
-            train.run_training()
-        except ImportError:
-            messagebox.showerror("Error", f"Cannot import train module for {module}")
+            script_path = os.path.join(
+                os.path.dirname(__file__), module.replace(".", "/"), "train.py"
+            )
+            process = subprocess.Popen(["python", script_path])
+            self.subprocesses.append(process)
+            self.show_popup("Training started successfully.")
+        except Exception as e:
+            self.show_popup(
+                f"An error occurred while starting training:\n\n{str(e)}", error=True
+            )
+
+    def show_popup(self, message, error=False):
+        popup = tk.Toplevel(self.root)
+        popup.title("Info" if not error else "Error")
+
+        label = tk.Label(popup, text=message)
+        label.pack(padx=20, pady=10)
+
+        close_button = tk.Button(popup, text="Close", command=popup.destroy)
+        close_button.pack(pady=10)
+
+        popup.mainloop()
+
+    def run_all_tests(self):
+        try:
+            test_script_path = os.path.join(os.path.dirname(__file__), "tnt", "test.py")
+            process = subprocess.Popen(["python", test_script_path])
+            self.subprocesses.append(process)
+            self.show_popup("Tests started successfully.")
+        except Exception as e:
+            self.show_popup(
+                f"An error occurred while starting tests:\n\n{str(e)}", error=True
+            )
+
+    def select_gpu(self):
+        gpu_selector = GpuSelector(self.root)
+        gpu_selector.select_gpu()
+
+    def run_all_training(self):
+        try:
+            train_script_path = os.path.join(
+                os.path.dirname(__file__), "tnt", "train.py"
+            )
+            process = subprocess.Popen(["python", train_script_path])
+            self.subprocesses.append(process)
+            self.show_popup("Training started successfully.")
+        except Exception as e:
+            self.show_popup(
+                f"An error occurred while starting training:\n\n{str(e)}", error=True
+            )
+
+    def run_live_analysis_button(self):
+        loading_bar = LoadingBar(total_stages=0, icon_path="favicon.ico")
+        run_with_gui(loading_bar=loading_bar)
+
+    def open_settings(self):
+        new_window = tk.Toplevel(self.root)
+        new_window.title("Settings")
+        config_form = ConfigForm(new_window, Config)
+
+    def cancel(self):
+        # Terminate all subprocesses
+        for process in self.subprocesses:
+            process.terminate()
+        self.root.destroy()
+
+    def import_data_file(self):
+        file_path = filedialog.askopenfilename(
+            initialdir=os.getcwd(),
+            title="Select Data File",
+            filetypes=(("CSV Files", "*.csv"), ("All Files", "*.*")),
+        )
+        if file_path:
+            destination_dir = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "tnt"
+            )
+            os.makedirs(destination_dir, exist_ok=True)
+            destination_path = os.path.join(destination_dir, "data.csv")
+
+            if os.path.abspath(file_path) != os.path.abspath(destination_path):
+                shutil.copy(file_path, destination_path)
+                self.show_popup("Data file imported successfully.")
+            else:
+                self.show_popup("Data file is already in the destination folder.")
+
+    def set_window_icon(self):
+        icon_path = os.path.join(os.path.dirname(__file__), "favicon.ico")
+        if os.path.exists(icon_path):
+            self.root.iconbitmap(icon_path)
 
     def show_options(self):
+        self.set_window_icon()  # Set the window icon
+
         self.title_label.pack(pady=20)
 
         # CUDA label
@@ -186,7 +257,14 @@ class OptionsGUI:
         label = self.create_label("Which action would you like to perform?")
         options = ["Run Test", "Run Training"]
 
-        subfolders = ["summary_generator", "sentiment_analysis", "keyword_extraction"]
+        subfolders = ["summary_generation", "sentiment_analysis", "ner"]
+
+        # Run All Tests button
+        all_tests_button = self.create_button("Run All Tests", 20, self.run_all_tests)
+        all_training_button = self.create_button(
+            "Run All Training", 20, self.run_all_training
+        )
+
         for subfolder in subfolders:
             module_label = self.create_label(f"{subfolder.capitalize()}:")
             for option in options:
@@ -201,50 +279,66 @@ class OptionsGUI:
             self.create_button_separator()
 
         live_analysis_button = self.create_button(
-            "Run Live Analysis",
-            20,
-            lambda: self.on_button_click("Run Live Analysis", ""),
-        )
-
-        # Run All Tests button
-        all_tests_button = self.create_button("Run All Tests", 20, self.run_all_tests)
-
-        # Run All Training button
-        all_training_button = self.create_button(
-            "Run All Training", 20, self.run_all_training
+            "Run Live Analysis", 20, self.run_live_analysis_button
         )
 
         settings_button = self.create_button("Settings", 20, self.open_settings)
+
+        import_data_button = self.create_button(
+            "Import Data File", 20, self.import_data_file
+        )  # Added the Import Data File button
 
         cancel_button = self.create_button("Exit", 20, self.cancel)
 
         self.root.mainloop()
 
-    def select_gpu(self):
-        gpu_selector = GpuSelector()
-        gpu_selector.run()
 
-    def run_live_analysis(self):
-        import main
+class ConfigForm:
+    def __init__(self, master, config):
+        self.master = master
+        self.config = config
+        self.entries = {}
 
-        main.run_live_analysis()
+        # Create a new scrollable canvas
+        canvas = tk.Canvas(master)
+        scrollbar = tk.Scrollbar(master, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
 
-    def run_all_tests(self):
-        import tnt.test as test
+        # Configure the scroll region of the canvas to fit the scrollable frame
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all")),
+        )
 
-        test.run_tests()
+        # Make the canvas reflect the movements on the scrollbar
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
 
-    def run_all_training(self):
-        import tnt.train as train
+        row = 0
+        for var in dir(self.config):
+            if not var.startswith("__"):
+                label = tk.Label(scrollable_frame, text=var)
+                label.grid(row=row, column=0)
 
-        train.run_training()
+                entry = tk.Entry(scrollable_frame)
+                entry.insert(0, str(getattr(self.config, var)))
+                entry.grid(row=row, column=1)
 
-    def open_settings(self):
-        settings_gui = SettingsGUI()
-        settings_gui.run()
+                self.entries[var] = entry
+                row += 1
 
-    def cancel(self):
-        self.root.destroy()
+        submit_button = tk.Button(scrollable_frame, text="Submit", command=self.submit)
+        submit_button.grid(row=row, column=0, columnspan=2)
+
+        # Pack the canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+    def submit(self):
+        for var, entry in self.entries.items():
+            setattr(self.config, var, eval(entry.get()))
+
+        self.master.destroy()
 
 
 if __name__ == "__main__":

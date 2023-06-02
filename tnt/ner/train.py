@@ -1,80 +1,69 @@
-import pandas as pd
-from transformers import AutoTokenizer, AutoModelForTokenClassification
-import torch
+import csv
+from transformers import (
+    pipeline,
+    TrainingArguments,
+    Trainer,
+    RobertaTokenizer,
+    RobertaForSequenceClassification,
+)
 from config import Config
 
-def preprocess_text(text):
-    # Add any necessary preprocessing steps
-    # ...
 
-    return text
+def run_training():
+    config = Config()
 
-def perform_ner(test_data, tokenizer, model):
-    # Initialize the results list
-    results = []
+    # Load the training data
+    data = load_data_from_csv(config.DATA_CSV)
 
-    # Perform NER on each example in the test data
-    for _, row in test_data.iterrows():
-        text = row['text']
+    # Prepare the data for training
+    tokenizer = RobertaTokenizer.from_pretrained(config.NER_MODEL)
+    labels = [label for label in config.SENTIMENT_LABELS]
+    label_map = {label: i for i, label in enumerate(labels)}
 
-        # Preprocess the text
-        preprocessed_text = preprocess_text(text)
+    # Prepare the training arguments
+    training_args = TrainingArguments(
+        output_dir=config.SAVED_MODEL_DIR,
+        num_train_epochs=config.NUM_EPOCHS,
+        per_device_train_batch_size=config.BATCH_SIZE,
+        save_total_limit=config.SAVE_LIMIT,
+        learning_rate=config.LEARNING_RATE,
+        logging_dir=config.LOG_DIR,
+        logging_steps=config.LOG_STEPS,
+        save_strategy=config.SAVE_STRATEGY,
+    )
 
-        # Tokenize the text
-        inputs = tokenizer.encode_plus(preprocessed_text, truncation=True, padding='max_length', max_length=Config.MAX_SECTION_LENGTH, return_tensors='pt')
-        input_ids = inputs['input_ids']
-        attention_mask = inputs['attention_mask']
+    # Prepare the model
+    model = RobertaForSequenceClassification.from_pretrained(
+        config.NER_MODEL, num_labels=len(labels)
+    )
 
-        # Perform NER using the model
-        outputs = model(input_ids, attention_mask=attention_mask)
-        predicted_labels = torch.argmax(outputs.logits, dim=2)[0]
+    # Prepare the trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=data,
+        tokenizer=tokenizer,
+        data_collator=lambda data: tokenizer(
+            data["text"], truncation=True, padding=True
+        ),
+        compute_metrics=None,
+    )
 
-        # Extract named entities and their labels
-        entities = []
-        current_entity = ""
-        current_label = ""
-        for token, label_id in zip(tokenizer.tokenize(preprocessed_text), predicted_labels):
-            label = tokenizer.decode(label_id)
-            if label.startswith('B-'):
-                if current_entity:
-                    entities.append((current_entity, current_label))
-                current_entity = token
-                current_label = label[2:]
-            elif label.startswith('I-'):
-                if current_entity:
-                    current_entity += " " + token
-            else:
-                if current_entity:
-                    entities.append((current_entity, current_label))
-                current_entity = ""
-                current_label = ""
-        
-        if current_entity:
-            entities.append((current_entity, current_label))
+    # Start the training
+    trainer.train()
 
-        # Add the results to the list
-        results.append((text, entities))
+    # Save the trained model
+    trainer.save_model(config.SAVED_MODEL_DIR)
 
-    return results
 
-def run_tests():
-    # Load the test data from CSV
-    test_data = pd.read_csv(Config.TEST_DATA_CSV)
+def load_data_from_csv(file_path):
+    data = []
+    with open(file_path, "r", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            data.append(row)
+    return data
 
-    # Load the tokenizer and model
-    tokenizer = AutoTokenizer.from_pretrained(Config.NER_MODEL)
-    model = AutoModelForTokenClassification.from_pretrained(Config.NER_MODEL)
 
-    # Perform NER on the test data
-    results = perform_ner(test_data, tokenizer, model)
-
-    # Print the results
-    for text, entities in results:
-        print(f"Text: {text}")
-        print("Named Entities:")
-        for entity, label in entities:
-            print(f"- Entity: {entity}, Label: {label}")
-        print()
-
-if __name__ == '__main__':
-    run_tests()
+if __name__ == "__main__":
+    run_training()

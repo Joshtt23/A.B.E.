@@ -8,6 +8,7 @@ News ML is a Python application that fetches news articles, performs analysis on
 - [Installation](#installation)
 - [Usage](#usage)
 - [Files](#files)
+- [Running as a Server](#running-as-a-server)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -39,7 +40,7 @@ To install and run the News ML application, follow these steps:
 
 To use the News ML application, follow these steps:
 
-1. Run News ML.bat as an administrator.
+1. Run News ML as an administrator.
    - If prompted, grant administrator privileges to the script.
    - The application will start automatically once the administrator check is successful.
 2. Complete tasks using the user interface:
@@ -73,9 +74,23 @@ The News ML application consists of the following files and folders:
     - `test.py`: Script for running summary generation tests.
     - `train.py`: Script for training summary generation models.
 - `run.py`: Script to run the application's user interface (UI).
-- `News ML.bat`: Batch file to start the application automatically.
+- `run-server.py`: Script to run the application as a server.
+- `News ML.bat`: Batch file to start the application's UI automatically.
 - `result.json`: JSON file to store the analyzed articles and metrics.
 - `README.md`: This file.
+
+## Running as a Server
+
+If you prefer to run the News ML application as a server without the user interface, you can use the `run-server.py` script. This script will continuously run the live analysis at a specified interval.
+
+To run the News ML server:
+
+1. Open a command line interface.
+2. Navigate to the project directory.
+3. Run the following command: ```python run-server.py```
+
+- The server will start running, and the live analysis will be performed at the specified interval.
+- You can modify the interval by changing the `interval` variable in the `run-server.py` script.
 
 ## Contributing
 

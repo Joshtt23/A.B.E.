@@ -1,47 +1,83 @@
-import pandas as pd
-from transformers import T5Tokenizer, T5ForConditionalGeneration
-
+import csv
+import torch
+from transformers import T5ForConditionalGeneration, T5Tokenizer
 from config import Config
 
-def preprocess_text(text):
-    # Add any necessary preprocessing steps
-    # ...
-
-    return text
-
-def train_summary_generator_model(train_data, tokenizer):
-    # Initialize the model
-    model = T5ForConditionalGeneration.from_pretrained(Config.SUMMARY_MODEL)
-
-    # Perform the training loop
-    for _, row in train_data.iterrows():
-        text = row['text']
-        label_sentiment = row['label_sentiment']
-        label_keyword = row['label_keyword']
-        summary = row['summary']
-
-        # Preprocess the text
-        preprocessed_text = preprocess_text(text)
-
-        # Encode the input and target sequences
-        inputs = tokenizer.encode("summarize: " + preprocessed_text, return_tensors="pt", max_length=Config.MAX_LENGTH, truncation=True)
-        targets = tokenizer.encode(summary, return_tensors="pt", max_length=Config.MAX_SUMMARY_LENGTH, truncation=True)
-
-        # Train the model on the input and target sequences
-        model(inputs, labels=targets)
-
-    # Save the trained model
-    model.save_pretrained(Config.SAVED_MODEL_DIR)
 
 def run_training():
-    # Read the training data from CSV
-    train_data = pd.read_csv(Config.TRAIN_DATA_CSV)
+    config = Config()
 
-    # Initialize the tokenizer
-    tokenizer = T5Tokenizer.from_pretrained(Config.SUMMARY_MODEL)
+    # Load the training data from the CSV file
+    training_data = load_data(config.DATA_CSV)
 
-    # Train the model on the training data
-    train_summary_generator_model(train_data, tokenizer)
+    # Preprocess the training data
+    preprocessed_data = preprocess_data(training_data, config)
+
+    # Train the summary generation model
+    train_model(preprocessed_data, config)
+
+
+def load_data(file_path):
+    data = []
+    with open(file_path, 'r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            data.append(row)
+    return data
+
+
+def preprocess_data(data, config):
+    preprocessed_data = []
+    tokenizer = T5Tokenizer.from_pretrained(config.SUMMARY_MODEL)
+
+    for item in data:
+        text = item['text']
+        summary = item['summary']
+
+        # Tokenize the input text and summary
+        input_ids = tokenizer.encode(text, truncation=True, padding='max_length', max_length=config.MAX_LENGTH)
+        target_ids = tokenizer.encode(summary, truncation=True, padding='max_length', max_length=config.MAX_SUMMARY_LENGTH)
+
+        # Add the preprocessed data to the list
+        preprocessed_data.append((input_ids, target_ids))
+
+    return preprocessed_data
+
+
+def train_model(data, config):
+    model = T5ForConditionalGeneration.from_pretrained(config.SUMMARY_MODEL)
+    tokenizer = T5Tokenizer.from_pretrained(config.SUMMARY_MODEL)
+
+    # Set up the training loop
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config.LEARNING_RATE)
+
+    # Training loop
+    for epoch in range(config.NUM_EPOCHS):
+        total_loss = 0
+        for input_ids, target_ids in data:
+            # Convert the input and target to tensors
+            input_ids = torch.tensor(input_ids).unsqueeze(0)
+            target_ids = torch.tensor(target_ids).unsqueeze(0)
+
+            # Clear the gradients
+            model.zero_grad()
+
+            # Forward pass
+            outputs = model(input_ids=input_ids, labels=target_ids)
+            loss = outputs.loss
+            total_loss += loss.item()
+
+            # Backward pass and optimization
+            loss.backward()
+            optimizer.step()
+
+        # Print the average loss for the epoch
+        avg_loss = total_loss / len(data)
+        print(f"Epoch {epoch+1} - Average Loss: {avg_loss}")
+
+    # Save the trained model
+    model.save_pretrained(config.SAVED_MODEL_DIR)
+
 
 if __name__ == '__main__':
     run_training()

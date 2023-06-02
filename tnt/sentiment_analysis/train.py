@@ -1,29 +1,69 @@
-import pandas as pd
-from transformers import AutoModelForTokenClassification, AutoTokenizer
+import csv
+from transformers import (
+    pipeline,
+    TrainingArguments,
+    Trainer,
+    RobertaTokenizer,
+    RobertaForSequenceClassification,
+)
+from config import Config
 
-from tnt.ner import preprocess_text, train_ner_model
 
-def train_ner():
-    # Load the training data from CSV
-    train_data = pd.read_csv('tnt/data.csv')
+def run_training():
+    config = Config()
 
-    # Initialize the model and tokenizer
-    model = AutoModelForTokenClassification.from_pretrained('dbmdz/bert-large-cased-finetuned-conll03-english')
-    tokenizer = AutoTokenizer.from_pretrained('dbmdz/bert-large-cased-finetuned-conll03-english')
+    # Load the training data
+    data = load_data_from_csv(config.DATA_CSV)
 
-    # Perform the training loop
-    for _, row in train_data.iterrows():
-        text = row['text']
-        labels = row['label_keyword']
+    # Prepare the data for training
+    tokenizer = RobertaTokenizer.from_pretrained(config.SENTIMENT_ANALYSIS_MODEL)
+    labels = [label for label in config.SENTIMENT_LABELS]
+    label_map = {label: i for i, label in enumerate(labels)}
 
-        # Preprocess the text
-        preprocessed_text = preprocess_text(text)
+    # Prepare the training arguments
+    training_args = TrainingArguments(
+        output_dir=config.SAVED_MODEL_DIR,
+        num_train_epochs=config.NUM_EPOCHS,
+        per_device_train_batch_size=config.BATCH_SIZE,
+        save_total_limit=config.SAVE_LIMIT,
+        learning_rate=config.LEARNING_RATE,
+        logging_dir=config.LOG_DIR,
+        logging_steps=config.LOG_STEPS,
+        save_strategy=config.SAVE_STRATEGY,
+    )
 
-        # Train the model on the preprocessed text and labels
-        train_ner_model(model, tokenizer, preprocessed_text, labels)
+    # Prepare the model
+    model = RobertaForSequenceClassification.from_pretrained(
+        config.SENTIMENT_ANALYSIS_MODEL, num_labels=len(labels)
+    )
+
+    # Prepare the trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=data,
+        tokenizer=tokenizer,
+        data_collator=lambda data: tokenizer(
+            data["text"], truncation=True, padding=True
+        ),
+        compute_metrics=None,
+    )
+
+    # Start the training
+    trainer.train()
 
     # Save the trained model
-    model.save_pretrained('saved_model')
+    trainer.save_model(config.SAVED_MODEL_DIR)
 
-if __name__ == '__main__':
-    train_ner()
+
+def load_data_from_csv(file_path):
+    data = []
+    with open(file_path, "r", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            data.append(row)
+    return data
+
+
+if __name__ == "__main__":
+    run_training()
