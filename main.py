@@ -14,6 +14,7 @@ from _news.score_calculator import (
     calculate_keyword_extraction_metrics,
     calculate_summary_generation_metrics,
 )
+import asyncio
 
 EXCLUDE_LIST = Config.EXCLUDE_LIST
 
@@ -76,11 +77,11 @@ class LoadingBar(tk.Tk):
             self.iconbitmap(icon_path)
 
 
-def perform_live_analysis(loading_bar=None):
+async def perform_live_analysis(loading_bar=None):
     try:
         # Fetch news articles
         logger.info("Fetching news articles...")
-        raw_urls = fetch_news()
+        raw_urls = await fetch_news()  # Await fetch_news() function
         if loading_bar and loading_bar.cancelled:
             return
         logger.info(f"Fetched {len(raw_urls)} news articles.")
@@ -90,7 +91,7 @@ def perform_live_analysis(loading_bar=None):
 
         # Clean and validate URLs
         logger.info("Cleaning and validating URLs...")
-        cleaned_urls = clean_urls(raw_urls)
+        cleaned_urls = await clean_urls(raw_urls)  # Await clean_urls() function
         if loading_bar and loading_bar.cancelled:
             return
         logger.info(f"Cleaned and validated {len(cleaned_urls)} URLs.")
@@ -107,90 +108,92 @@ def perform_live_analysis(loading_bar=None):
             if loading_bar:
                 loading_bar.increment_current_stage()
             logger.info(f"Processing article {i + 1}/{len(cleaned_urls)}")
-            article = scrape_and_process(
+            article = await scrape_and_process(
                 url, headers=HEADERS, exclude_list=EXCLUDE_LIST
-            )
+            )  # Await scrape_and_process() function
             if article is not None:
                 articles.append(article)
 
-        if loading_bar:
-            loading_bar.update_progress(100, "Performing analysis on articles...")
-        logger.info("Performing analysis on articles...")
-        analyzed_articles = ml_using_trnf(articles)
-        if loading_bar and loading_bar.cancelled:
-            return
-        logger.info("Analysis completed.")
+        # if loading_bar:
+        #     loading_bar.update_progress(100, "Performing analysis on articles...")
+        # logger.info("Performing analysis on articles...")
+        # analyzed_articles = ml_using_trnf(articles)
+        # if loading_bar and loading_bar.cancelled:
+        #     return
+        # logger.info("Analysis completed.")
 
-        # Calculate sentiment metrics
-        logger.info("Calculating sentiment metrics...")
-        ground_truth_sentiment = [
-            article["sentiment_spacy"]["polarity"]
-            for article in analyzed_articles.values()
-        ]
-        predicted_sentiment = [
-            article["sentiment_transformer"] for article in analyzed_articles.values()
-        ]
+        # # Calculate sentiment metrics
+        # logger.info("Calculating sentiment metrics...")
+        # ground_truth_sentiment = [
+        #     article["sentiment_spacy"]["polarity"]
+        #     for article in analyzed_articles.values()
+        # ]
+        # predicted_sentiment = [
+        #     article["sentiment_transformer"] for article in analyzed_articles.values()
+        # ]
 
-        threshold = 0.2
-        sentiment_metrics = calculate_sentiment_metrics(
-            ground_truth_sentiment, predicted_sentiment, threshold
-        )
-        logger.info("Sentiment metrics calculated.")
+        # threshold = 0.2
+        # sentiment_metrics = calculate_sentiment_metrics(
+        #     ground_truth_sentiment, predicted_sentiment, threshold
+        # )
+        # logger.info("Sentiment metrics calculated.")
 
-        # Calculate keyword extraction metrics
-        logger.info("Calculating keyword extraction metrics...")
-        try:
-            reference_keywords = [
-                article["keywords_spacy"] for article in analyzed_articles.values()
-            ]
-            extracted_keywords = [
-                article["keywords_rake"] for article in analyzed_articles.values()
-            ]
-            keyword_extraction_metrics = calculate_keyword_extraction_metrics(
-                reference_keywords, extracted_keywords
-            )
-            logger.info("Keyword extraction metrics calculated.")
-        except KeyError:
-            logger.error(
-                "Unable to calculate keyword extraction metrics. Key 'keywords_spacy' or 'keywords_rake' not found in analyzed articles."
-            )
-            keyword_extraction_metrics = None
+        # # Calculate keyword extraction metrics
+        # logger.info("Calculating keyword extraction metrics...")
+        # try:
+        #     reference_keywords = [
+        #         article["keywords_spacy"] for article in analyzed_articles.values()
+        #     ]
+        #     extracted_keywords = [
+        #         article["keywords_rake"] for article in analyzed_articles.values()
+        #     ]
+        #     keyword_extraction_metrics = calculate_keyword_extraction_metrics(
+        #         reference_keywords, extracted_keywords
+        #     )
+        #     logger.info("Keyword extraction metrics calculated.")
+        # except KeyError:
+        #     logger.error(
+        #         "Unable to calculate keyword extraction metrics. Key 'keywords_spacy' or 'keywords_rake' not found in analyzed articles."
+        #     )
+        #     keyword_extraction_metrics = None
 
-        # Calculate summary generation metrics
-        logger.info("Calculating summary generation metrics...")
-        try:
-            reference_summaries = [
-                article["summary_spacy"] for article in analyzed_articles.values()
-            ]
-            generated_summaries = [
-                article["summary_transformer"] for article in analyzed_articles.values()
-            ]
-            summary_generation_metrics = calculate_summary_generation_metrics(
-                reference_summaries, generated_summaries
-            )
-            logger.info("Summary generation metrics calculated.")
-        except KeyError:
-            logger.error(
-                "Unable to calculate summary generation metrics. Key 'summary_spacy' or 'summary_transformer' not found in analyzed articles."
-            )
-            summary_generation_metrics = None
+        # # Calculate summary generation metrics
+        # logger.info("Calculating summary generation metrics...")
+        # try:
+        #     reference_summaries = [
+        #         article["summary_spacy"] for article in analyzed_articles.values()
+        #     ]
+        #     generated_summaries = [
+        #         article["summary_transformer"] for article in analyzed_articles.values()
+        #     ]
+        #     summary_generation_metrics = calculate_summary_generation_metrics(
+        #         reference_summaries, generated_summaries
+        #     )
+        #     logger.info("Summary generation metrics calculated.")
+        # except KeyError:
+        #     logger.error(
+        #         "Unable to calculate summary generation metrics. Key 'summary_spacy' or 'summary_transformer' not found in analyzed articles."
+        #     )
+        #     summary_generation_metrics = None
 
-        # Store metrics in a dictionary
-        metrics = {
-            "sentiment_metrics": sentiment_metrics,
-            "keyword_extraction_metrics": keyword_extraction_metrics,
-            "summary_generation_metrics": summary_generation_metrics,
-        }
+        # # Store metrics in a dictionary
+        # metrics = {
+        #     "sentiment_metrics": sentiment_metrics,
+        #     "keyword_extraction_metrics": keyword_extraction_metrics,
+        #     "summary_generation_metrics": summary_generation_metrics,
+        # }
 
-        # Write the analyzed articles and metrics to result.json
-        result = {"analyzed_articles": analyzed_articles, "metrics": metrics}
+        # # Write the analyzed articles and metrics to result.json
+        # result = {"analyzed_articles": analyzed_articles, "metrics": metrics}
 
-        with open("result.json", "w") as f:
-            json.dump(result, f)
+    #     with open("result.json", "w") as f:
+    #         json.dump(articles, f)
 
-        if loading_bar:
-            loading_bar.update_progress(100, "Analysis complete.")
+    #     if loading_bar:
+    #         loading_bar.update_progress(100, "Analysis complete.")
+
         logger.info("Analysis complete.")
+        logger.info(articles)
     except tk.TclError:
         logger.info("Analysis paused. Click 'Resume' to continue.")
 
@@ -215,7 +218,7 @@ def run_with_gui(loading_bar):
     loading_bar.protocol("WM_DELETE_WINDOW", on_cancel)
     loading_bar.resizable(False, False)
     loading_bar.update_progress(0, "Fetching news articles...")
-    perform_live_analysis(loading_bar)
+    asyncio.run(perform_live_analysis(loading_bar))  # Run the async function with asyncio.run()
 
     loading_bar.mainloop()
 

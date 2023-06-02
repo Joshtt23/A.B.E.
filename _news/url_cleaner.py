@@ -1,9 +1,8 @@
-# _news/url_cleaner.py
 from urllib.parse import urlparse, urlunparse, unquote
 import validators
 import logging
 
-def clean_urls(urls):
+async def clean_urls(urls):
     """
     Cleans and validates the URLs in a given list
     """
@@ -11,25 +10,25 @@ def clean_urls(urls):
         unquote(
             urlunparse(
                 (
-                    urlparse(url).scheme.lower(), 
-                    urlparse(url).netloc.lower().rstrip('/'), 
-                    urlparse(url).path, 
-                    '', 
-                    '', 
+                    urlparse(url).scheme.lower(),
+                    urlparse(url).netloc.lower().rstrip('/'),
+                    urlparse(url).path,
+                    '',
+                    '',
                     ''
                 )
             )
         )
-        for url in urls 
+        for url in urls
         if validators.url(
             unquote(
                 urlunparse(
                     (
-                        urlparse(url).scheme.lower(), 
-                        urlparse(url).netloc.lower().rstrip('/'), 
-                        urlparse(url).path, 
-                        '', 
-                        '', 
+                        urlparse(url).scheme.lower(),
+                        urlparse(url).netloc.lower().rstrip('/'),
+                        urlparse(url).path,
+                        '',
+                        '',
                         ''
                     )
                 )

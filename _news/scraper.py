@@ -1,11 +1,10 @@
-# _news/scraper.py
-import requests
-from bs4 import BeautifulSoup
+import aiohttp
 import logging
-from langdetect import detect
+from bs4 import BeautifulSoup
 import re
+from langdetect import detect
 
-def scrape_and_process(url, headers, exclude_list):
+async def scrape_and_process(url, headers, exclude_list):
     """
     Scrapes and processes the content of a given URL.
     Returns a dictionary containing the URL and processed article text, or None if an error occurs or the content is not valid.
@@ -34,39 +33,39 @@ def scrape_and_process(url, headers, exclude_list):
         return text
 
     try:
-        with requests.Session() as session:
-            r = session.get(url, headers=headers)
-            r.raise_for_status()
-            soup = BeautifulSoup(r.text, "lxml")
-            results = soup.find_all("p")
-            text = [res.text for res in results]
-            article = " ".join(text)
-            
-            # Language filtering
-            detected_lang = detect(article)
-            if detected_lang != "en":
-                logging.warning(f"Detected language is {detected_lang}, skipping URL: {url}")
-                return None
-            
-            # Clean and preprocess the article text
-            article = clean_text(article)
-            
-            # Exclude articles containing specific phrases
-            if any(exclude in article for exclude in exclude_list) or len(article) <= 50:
-                logging.warning(f"Excluded URL due to specific phrases or short length: {url}")
-                return None
-            
-            logging.info(f"Scraping and processing of URL successful: {url}")
-            return {"url": url, "article": article}
-        
-    except requests.exceptions.RequestException as e:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as r:
+                r.raise_for_status()
+                soup = BeautifulSoup(await r.text(), "lxml")
+                results = soup.find_all("p")
+                text = [res.text for res in results]
+                article = " ".join(text)
+
+                # Language filtering
+                detected_lang = detect(article)
+                if detected_lang != "en":
+                    logging.warning(f"Detected language is {detected_lang}, skipping URL: {url}")
+                    return None
+
+                # Clean and preprocess the article text
+                article = clean_text(article)
+
+                # Exclude articles containing specific phrases
+                if any(exclude in article for exclude in exclude_list) or len(article) <= 50:
+                    logging.warning(f"Excluded URL due to specific phrases or short length: {url}")
+                    return None
+
+                logging.info(f"Scraping and processing of URL successful: {url}")
+                return {"url": url, "article": article}
+
+    except aiohttp.ClientError as e:
         logging.error(f"Error making the request: {str(e)}")
         return None
-        
+
     except AttributeError as e:
         logging.error(f"Error accessing attributes: {str(e)}")
         return None
-        
+
     except Exception as e:
         logging.error(f"Error processing URL: {url}. Error: {str(e)}")
         return None
