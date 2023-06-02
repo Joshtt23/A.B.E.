@@ -1,13 +1,13 @@
 import asyncio
 import logging
-from main import run_live_analysis
+from main import perform_live_analysis
 from config import Config
 
 
 async def run_server(interval):
     while True:
         try:
-            await run_live_analysis()  # Run the live analysis
+            await perform_live_analysis()  # Run the live analysis
         except Exception as e:
             logging.error(f"An error occurred during live analysis: {str(e)}")
 

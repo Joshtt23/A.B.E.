@@ -69,7 +69,7 @@ class LoadingBar(tk.Tk):
             self.iconbitmap(icon_path)
 
 
-def perform_live_analysis(loading_bar):
+def perform_live_analysis(loading_bar=None):
     try:
         # Fetch news articles
         logger.info("Fetching news articles...")
@@ -88,8 +88,9 @@ def perform_live_analysis(loading_bar):
             return
         logger.info(f"Cleaned and validated {len(cleaned_urls)} URLs.")
 
-        # Update total stages in loading bar
-        loading_bar.update_total_stages(len(cleaned_urls))
+        if loading_bar:
+            # Update total stages in loading bar
+            loading_bar.update_total_stages(len(cleaned_urls))
 
         # Scrape and process articles
         articles = []
@@ -99,9 +100,7 @@ def perform_live_analysis(loading_bar):
             if loading_bar:
                 loading_bar.increment_current_stage()
             logger.info(f"Processing article {i + 1}/{len(cleaned_urls)}")
-            article = scrape_and_process(
-                url, headers=HEADERS, exclude_list=EXCLUDE_LIST
-            )
+            article = scrape_and_process(url, headers=HEADERS, exclude_list=EXCLUDE_LIST)
             if article is not None:
                 articles.append(article)
 
@@ -185,7 +184,6 @@ def perform_live_analysis(loading_bar):
         logger.info("Analysis complete.")
     except tk.TclError:
         logger.info("Analysis paused. Click 'Resume' to continue.")
-
 
 def run_with_gui(loading_bar):
     loading_bar.update_progress(0, "Initializing...")
