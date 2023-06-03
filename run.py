@@ -8,7 +8,10 @@ import torch
 from PIL import ImageTk, Image
 from main import run_with_gui, LoadingBar
 from config import Config
-from inspect import getattr_static, isclass
+from inspect import getattr_static
+import ast
+from pathlib import Path
+import types
 
 
 class GpuSelector:
@@ -337,18 +340,69 @@ class ConfigForm:
 
     def submit(self):
         for var, entry in self.entries.items():
-            setattr(self.config, var, eval(entry.get()))
+            value = entry.get()
+            original_value = getattr(
+                self.config, var
+            )  # Get the original value from the config
+            value_type = type(
+                original_value
+            ).__name__  # Get the original value's type name
 
-        # Save the updated configuration to the config.py file
-        with open("config.py", "w") as file:
-            file.write(f"class Config:\n")
-            for var, entry in self.entries.items():
-                value = entry.get()
-                if isinstance(eval(value), str):
-                    file.write(f'    {var} = "{value}"\n')
-                else:
-                    file.write(f"    {var} = {value}\n")
+            # Parse the input value according to the original type
+            if value_type == "int":
+                value = int(value)
+            elif value_type == "float":
+                value = float(value)
+            elif value_type == "list":
+                try:
+                    value = ast.literal_eval(
+                        value
+                    )  # Safely evaluate the string as a list
+                except (SyntaxError, ValueError):
+                    value = original_value  # If parsing fails, use the original value
+            elif value_type == "bool":
+                value = value.lower() == "true"  # Convert the input value to boolean
 
+            setattr(self.config, var, value)
+
+        # Save the updated configuration to a temporary file
+        config_tmp_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "config_tmp.py"
+        )
+        with open(config_tmp_path, "w") as file:
+            file.write("import torch\n")
+            file.write("from pathlib import Path\n\n")
+            file.write("from typing import List\n\n")
+            file.write("class Config:\n")
+            for var in dir(self.config):
+                if not var.startswith("__"):
+                    value = getattr(self.config, var)
+                    value_type = type(value).__name__
+                    if isinstance(value, str):
+                        value = value.replace("\\", "\\\\")  # Escape backslashes
+                        value = value.replace('"', r"\"")  # Escape double quotes
+                        value = f'"{value}"'  # Add double quotes around strings
+                    elif isinstance(value, list):
+                        value = repr(value)[1:-1]  # Use repr() and remove brackets []
+                    else:
+                        value = str(value)
+                    line = f"    {var}: {value_type} = {value}\n"
+                    file.write(line)
+
+        # Backup the original config.py file
+        config_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "config.py"
+        )
+        config_backup_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "config_backup.py"
+        )
+        shutil.copyfile(config_path, config_backup_path)
+
+        # Replace the original config.py file with the temporary file
+        shutil.copyfile(config_tmp_path, config_path)
+        os.remove(config_tmp_path)
+
+        print("Configuration updated and written to config.py")
         self.master.destroy()
 
 

@@ -3,31 +3,12 @@ from pathlib import Path
 
 from typing import List
 
-
 class Config:
     ACCEPT_LANGUAGE: str = "en-US,en;q=0.9"
     API_KEY: str = "1d5cf60e30a349a08453563a05adbc1d"
-    BATCH_SIZE: int = 8
     DATA_CSV: str = "C:\\Users\\josht\\Desktop\\News ML\\data.csv"
     DEVICE_CUDA: int = 0
-    EXCLUDE_LIST: List[str] = [
-        "error",
-        "access denied",
-        "forbidden",
-        "not found",
-        "bad request",
-        "unauthorized",
-        "internal server error",
-        "service unavailable",
-        "gateway timeout",
-        "404",
-        "500",
-        "403",
-        "401",
-        "400",
-        "503",
-        "504",
-    ]
+    EXCLUDE_LIST: str = "('error', 'access denied', 'forbidden', 'not found', 'bad request', 'unauthorized', 'internal server error', 'service unavailable', 'gateway timeout', '404', '500', '403', '401', '400', '503', '504')"
     HUGGINGFACE_ENTITY_TYPE: str = "MISC"
     KEYWORDS_LIMIT: int = 10
     KEYWORD_EXTRACTION_AVERAGE_STRATEGY: str = "macro"
@@ -39,7 +20,7 @@ class Config:
     MAX_WORKERS: int = 4
     MIN_LENGTH: int = 30
     NEGATIVE_THRESHOLD: float = -0.2
-    NER_MODEL: str = "dbmdz/bert-base-cased-finetuned-conll03-english"
+    NER_MODEL: str = "dslim/bert-base-NER"
     NEWS_COUNT: int = 10
     NUM_EPOCHS: int = 10
     NUM_SENTENCES: int = 4
@@ -56,7 +37,7 @@ class Config:
     SPACY_MODEL: str = "en_core_web_trf"
     SPACY_POS_TAGS: str = "('NOUN', 'PROPN')"
     SUMMARY_GENERATION_AVERAGE_STRATEGY: str = "macro"
-    SUMMARY_MODEL: str = "t5-small"
+    SUMMARY_MODEL: str = "google/pegasus-xsum"
     TARGET_LENGTH_RATIO: float = 0.4
     USER_AGENT: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"
     YAKE_LANGUAGE: str = "en"

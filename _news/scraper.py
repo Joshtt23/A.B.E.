@@ -3,6 +3,14 @@ import logging
 from bs4 import BeautifulSoup
 import re
 from langdetect import detect
+from config import Config
+
+logging.basicConfig(
+    level=Config.LOG_LEVEL,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("analysis.log"), logging.StreamHandler()],
+)
+
 
 async def scrape_and_process(url, headers, exclude_list):
     """
@@ -20,12 +28,19 @@ async def scrape_and_process(url, headers, exclude_list):
         # Remove unwanted text
         text = re.sub(r"\[Website Name\]", "", text)
         text = re.sub(r"https?://\S+|www\.\S+", "", text)
-        text = re.sub(r"This article is a paid publication and does not have journalistic editorial involvement of Hindustan Times.*$", "", text, flags=re.MULTILINE)
+        text = re.sub(
+            r"This article is a paid publication and does not have journalistic editorial involvement of Hindustan Times.*$",
+            "",
+            text,
+            flags=re.MULTILINE,
+        )
 
         # Clean and preprocess the text
         text = text.strip()
         text = re.sub(r"\s+", " ", text)
-        text = re.sub(r"[^\w\s.,?!]", "", text)  # Preserve periods, commas, question marks, and exclamation marks
+        text = re.sub(
+            r"[^\w\s.,?!]", "", text
+        )  # Preserve periods, commas, question marks, and exclamation marks
 
         # Ensure text format
         text = text.replace("\n", "")
@@ -34,25 +49,53 @@ async def scrape_and_process(url, headers, exclude_list):
 
     try:
         async with aiohttp.ClientSession() as session:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+
             async with session.get(url, headers=headers) as r:
                 r.raise_for_status()
                 soup = BeautifulSoup(await r.text(), "lxml")
-                results = soup.find_all("p")
-                text = [res.text for res in results]
-                article = " ".join(text)
+                article = ""
+
+                # Find article text in different HTML structures
+                article_tags = soup.find_all(["p", "div", "article", "section"])
+                for tag in article_tags:
+                    text = tag.get_text(separator=" ")
+                    if len(text) > len(article):
+                        article = text
 
                 # Language filtering
                 detected_lang = detect(article)
                 if detected_lang != "en":
-                    logging.warning(f"Detected language is {detected_lang}, skipping URL: {url}")
+                    logging.warning(
+                        f"Detected language is {detected_lang}, skipping URL: {url}"
+                    )
                     return None
 
                 # Clean and preprocess the article text
                 article = clean_text(article)
 
                 # Exclude articles containing specific phrases
-                if any(exclude in article for exclude in exclude_list) or len(article) <= 50:
-                    logging.warning(f"Excluded URL due to specific phrases or short length: {url}")
+                if (
+                    any(
+                        re.search(rf"\b{re.escape(exclude)}\b", article)
+                        for exclude in exclude_list
+                    )
+                    or len(article) <= 50
+                ):
+                    excluded_phrases = [
+                        exclude
+                        for exclude in exclude_list
+                        if re.search(rf"\b{re.escape(exclude)}\b", article)
+                    ]
+                    logging.warning(
+                        f"Excluded URL due to specific phrases or short length: {url}"
+                    )
+                    logging.debug(f"Article text: {article}")
+                    logging.debug(f"Article length: {len(article)}")
+                    logging.debug(f"Excluded phrases: {excluded_phrases}")
                     return None
 
                 logging.info(f"Scraping and processing of URL successful: {url}")

@@ -1,11 +1,12 @@
-from .keyword_extractor import KeywordExtractor
-from .sentiment_classifier import SentimentClassifier
-from .summary_generator import SummaryGenerator
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import logging
 import time
 from torch.utils.data import Dataset
 import torch
+from config import Config
+from _news.sentiment_classifier import SentimentClassifier
+from _news.keyword_extractor import KeywordExtractor
+from _news.summary_generator import SummaryGenerator
 
 
 class SectionDataset(Dataset):
@@ -33,13 +34,14 @@ class SectionProcessor:
         # Create the dataset
         dataset = SectionDataset(sections)
 
-        # Create the data loader
-        batch_size = 16
+        # Adjust the batch size parameter to increase the batch size
         data_loader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=True
+            dataset, batch_size=Config.BATCH_SIZE, shuffle=True
         )
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(
+            max_workers=Config.MAX_WORKERS
+        ) as executor:  # Fine-tune the number of workers based on system capabilities
             start_time = time.time()
 
             for batch in data_loader:
@@ -55,85 +57,95 @@ class SectionProcessor:
                     )
                     for sec in batch
                 ]
-                summary_spacy_futures = [
-                    executor.submit(self.summary_generator.generate_summary, sec)
-                    for sec in batch
-                ]
-                keywords_rake_futures = [
-                    executor.submit(self.keyword_extractor.extract_keywords_rake, sec)
-                    for sec in batch
-                ]
-                keywords_textrank_futures = [
-                    executor.submit(
-                        self.keyword_extractor.extract_keywords_textrank, sec
-                    )
-                    for sec in batch
-                ]
-                keywords_spacy_futures = [
-                    executor.submit(self.keyword_extractor.extract_keywords_spacy, sec)
-                    for sec in batch
-                ]
-                keywords_huggingface_futures = [
-                    executor.submit(
-                        self.keyword_extractor.extract_keywords_huggingface, sec
-                    )
-                    for sec in batch
-                ]
-                keywords_yake_futures = [
-                    executor.submit(self.keyword_extractor.extract_keywords_yake, sec)
-                    for sec in batch
-                ]
+                # summary_spacy_futures = [
+                #     executor.submit(self.summary_generator.generate_summary, sec)
+                #     for sec in batch
+                # ]
+                # summary_transformer_futures = [
+                #     executor.submit(
+                #         self.summary_generator.generate_summary_transformer, sec
+                #     )
+                #     for sec in batch
+                # ]
+                # keywords_rake_futures = [
+                #     executor.submit(self.keyword_extractor.extract_keywords_rake, sec)
+                #     for sec in batch
+                # ]
+                # keywords_textrank_futures = [
+                #     executor.submit(
+                #         self.keyword_extractor.extract_keywords_textrank, sec
+                #     )
+                #     for sec in batch
+                # ]
+                # keywords_spacy_futures = [
+                #     executor.submit(self.keyword_extractor.extract_keywords_spacy, sec)
+                #     for sec in batch
+                # ]
+                # keywords_huggingface_futures = [
+                #     executor.submit(
+                #         self.keyword_extractor.extract_keywords_huggingface, sec
+                #     )
+                #     for sec in batch
+                # ]
+                # keywords_yake_futures = [
+                #     executor.submit(self.keyword_extractor.extract_keywords_yake, sec)
+                #     for sec in batch
+                # ]
 
                 for i, sec in enumerate(batch):
                     sentiment_transformer = sentiment_futures[i].result()
                     self.logger.info(
                         f"Sentiment Transformer task completed for section {i + 1}/{len(batch)}"
                     )
-                    sentiment_spacy, sentiment_label_spacy = sentiment_spacy_futures[
-                        i
-                    ].result()
+                    sentiment_spacy, subjectivity_spacy = (
+                        sentiment_spacy_futures[i].result().values()
+                    )
+
                     self.logger.info(
                         f"Sentiment Spacy task completed for section {i + 1}/{len(batch)}"
                     )
-                    sentiment_spacy.pop("assessments", None)
-                    sentiment_spacy.pop("ngrams", None)
 
-                    summary_spacy = summary_spacy_futures[i].result()
-                    self.logger.info(
-                        f"Summary Spacy task completed for section {i + 1}/{len(batch)}"
-                    )
+                    # summary_spacy = summary_spacy_futures[i].result()
+                    # self.logger.info(
+                    #     f"Summary Spacy task completed for section {i + 1}/{len(batch)}"
+                    # )
+                    # summary_transformer = summary_transformer_futures[i].result()
+                    # self.logger.info(
+                    #     f"Summary Transformer task completed for section {i + 1}/{len(batch)}"
+                    # )
 
-                    keywords_rake = keywords_rake_futures[i].result()[:10]
-                    self.logger.info(
-                        f"Keywords Rake task completed for section {i + 1}/{len(batch)}"
-                    )
-                    keywords_textrank = keywords_textrank_futures[i].result()[:10]
-                    self.logger.info(
-                        f"Keywords Textrank task completed for section {i + 1}/{len(batch)}"
-                    )
-                    keywords_spacy = keywords_spacy_futures[i].result()[:10]
-                    self.logger.info(
-                        f"Keywords Spacy task completed for section {i + 1}/{len(batch)}"
-                    )
-                    keywords_huggingface = keywords_huggingface_futures[i].result()[:10]
-                    self.logger.info(
-                        f"Keywords Huggingface task completed for section {i + 1}/{len(batch)}"
-                    )
-                    keywords_yake = keywords_yake_futures[i].result()[:10]
-                    self.logger.info(
-                        f"Keywords Yake task completed for section {i + 1}/{len(batch)}"
-                    )
+                    # keywords_rake = keywords_rake_futures[i].result()[:10]
+                    # self.logger.info(
+                    #     f"Keywords Rake task completed for section {i + 1}/{len(batch)}"
+                    # )
+                    # keywords_textrank = keywords_textrank_futures[i].result()[:10]
+                    # self.logger.info(
+                    #     f"Keywords Textrank task completed for section {i + 1}/{len(batch)}"
+                    # )
+                    # keywords_spacy = keywords_spacy_futures[i].result()[:10]
+                    # self.logger.info(
+                    #     f"Keywords Spacy task completed for section {i + 1}/{len(batch)}"
+                    # )
+                    # keywords_huggingface = keywords_huggingface_futures[i].result()[:10]
+                    # self.logger.info(
+                    #     f"Keywords Huggingface task completed for section {i + 1}/{len(batch)}"
+                    # )
+                    # keywords_yake = keywords_yake_futures[i].result()[:10]
+                    # self.logger.info(
+                    #     f"Keywords Yake task completed for section {i + 1}/{len(batch)}"
+                    # )
 
                     analyzed_section = {
                         "sentiment_transformer": sentiment_transformer,
                         "sentiment_spacy": sentiment_spacy,
-                        "sentiment_label_spacy": sentiment_label_spacy,
-                        "summary_spacy": summary_spacy,
-                        "keywords_rake": keywords_rake,
-                        "keywords_textrank": keywords_textrank,
-                        "keywords_spacy": keywords_spacy,
-                        "keywords_huggingface": keywords_huggingface,
-                        "keywords_yake": keywords_yake,
+                        "subjectivity_spacy": subjectivity_spacy,
+                        # "summary_spacy": summary_spacy,
+                        # "summary_transformer": summary_transformer,
+                        # "keywords_rake": keywords_rake,
+                        # "keywords_textrank": keywords_textrank,
+                        # "keywords_spacy": keywords_spacy,
+                        # "keywords_huggingface": keywords_huggingface,
+                        # "keywords_yake": keywords_yake,
                     }
                     analyzed_sections.append(analyzed_section)
 
