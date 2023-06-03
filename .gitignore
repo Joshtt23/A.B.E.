@@ -2,4 +2,4 @@
 **/.vscode/*
 **/venv/*
 **/result.json
-**/analysis.json
+**/analysis.log

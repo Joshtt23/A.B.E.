@@ -35,7 +35,7 @@ def preprocess_data(data, config):
         summary = item['summary']
 
         # Tokenize the input text and summary
-        input_ids = tokenizer.encode(text, truncation=True, padding='max_length', max_length=config.MAX_LENGTH)
+        input_ids = tokenizer.encode(text, truncation=True, padding='max_length', max_length=config.MAX_SUMMARY_LENGTH)
         target_ids = tokenizer.encode(summary, truncation=True, padding='max_length', max_length=config.MAX_SUMMARY_LENGTH)
 
         # Add the preprocessed data to the list

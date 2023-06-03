@@ -22,7 +22,11 @@ class KeywordExtractor:
         tokenizer = AutoTokenizer.from_pretrained(Config.NER_MODEL)
         model = AutoModelForTokenClassification.from_pretrained(Config.NER_MODEL)
         self.transformer = pipeline(
-            "ner", model=model, tokenizer=tokenizer, device=Config.DEVICE_CUDA
+            "ner",
+            model=model,
+            tokenizer=tokenizer,
+            device=Config.DEVICE_CUDA,
+            grouped_entities=True,
         )
         self.logger = logging.getLogger(__name__)
 
@@ -48,10 +52,11 @@ class KeywordExtractor:
         keywords = [
             entity["word"]
             for entity in results
-            if entity["entity"] == Config.HUGGINGFACE_ENTITY_TYPE
+            if entity["entity_group"] in Config.ENTITY_GROUPS
         ][: Config.KEYWORDS_LIMIT]
         self.logger.info("Hugging Face keyword extraction completed.")
         return keywords
+
 
     def extract_keywords_yake(self, text):
         keywords = self.yake.extract_keywords(text)

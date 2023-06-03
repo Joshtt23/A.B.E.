@@ -14,8 +14,8 @@ class TextGenerator:
         try:
             generated_text = self.generator(
                 prompt,
-                max_length=self.config.MAX_LENGTH,
-                min_length=self.config.MIN_LENGTH,
+                max_length=self.config.MAX_SUMMARY_LENGTH,
+                min_length=self.config.MIN_SUMMARY_LENGTH,
                 num_return_sequences=1,
             )[0]["generated_text"]
             return generated_text

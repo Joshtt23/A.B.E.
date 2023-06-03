@@ -82,39 +82,39 @@ async def perform_live_analysis(loading_bar=None):
     try:
         # Fetch news articles
         logger.info("Fetching news articles...")
-        # raw_urls = await fetch_news()  # Await fetch_news() function
+        raw_urls = await fetch_news()  # Await fetch_news() function
         if loading_bar and loading_bar.cancelled:
             return
-        # logger.info(f"Fetched {len(raw_urls)} news articles.")
+        logger.info(f"Fetched {len(raw_urls)} news articles.")
 
         if loading_bar:
             loading_bar.update_progress(0, "Cleaning and validating URLs...")
 
         # Clean and validate URLs
         logger.info("Cleaning and validating URLs...")
-        # cleaned_urls = await clean_urls(raw_urls)  # Await clean_urls() function
+        cleaned_urls = await clean_urls(raw_urls)  # Await clean_urls() function
         if loading_bar and loading_bar.cancelled:
             return
-        # logger.info(f"Cleaned and validated {len(cleaned_urls)} URLs.")
+        logger.info(f"Cleaned and validated {len(cleaned_urls)} URLs.")
 
-        # if loading_bar:
+        if loading_bar:
             # Update total stages in loading bar
-            # loading_bar.update_total_stages(len(cleaned_urls))
+            loading_bar.update_total_stages(len(cleaned_urls))
 
         # Scrape and process articles
-        # articles = []
-        articles = SAMPLE
-        # for i, url in enumerate(cleaned_urls):
-        #     if loading_bar and loading_bar.cancelled:
-        #         return
-        #     if loading_bar:
-        #         loading_bar.increment_current_stage()
-        #     logger.info(f"Processing article {i + 1}/{len(cleaned_urls)}")
-        #     article = await scrape_and_process(
-        #         url, headers=HEADERS, exclude_list=EXCLUDE_LIST
-        #     )  # Await scrape_and_process() function
-        #     if article is not None:
-        #         articles.append(article)
+        articles = []
+        # articles = SAMPLE
+        for i, url in enumerate(cleaned_urls):
+            if loading_bar and loading_bar.cancelled:
+                return
+            if loading_bar:
+                loading_bar.increment_current_stage()
+            logger.info(f"Processing article {i + 1}/{len(cleaned_urls)}")
+            article = await scrape_and_process(
+                url, headers=HEADERS, exclude_list=EXCLUDE_LIST
+            )  # Await scrape_and_process() function
+            if article is not None:
+                articles.append(article)
         if loading_bar:
             loading_bar.update_progress(100, "Performing analysis on articles...")
         logger.info(f"Performing analysis on {len(articles)} articles...")
@@ -124,70 +124,67 @@ async def perform_live_analysis(loading_bar=None):
         logger.info("Analysis completed.")
 
         # Calculate sentiment metrics
-        # logger.info("Calculating sentiment metrics...")
-        # try:
-        #     ground_truth_sentiment = [
-        #         article["sentiment_spacy"] for article in analyzed_articles.values()
-        #     ]
-        #     predicted_sentiment = [
-        #         article["sentiment_transformer"]
-        #         for article in analyzed_articles.values()
-        #     ]
+        logger.info("Calculating sentiment metrics...")
+        try:
+            ground_truth_sentiment = [
+                article["sentiment_spacy"] for article in analyzed_articles.values()
+            ]
+            predicted_sentiment = [
+                article["sentiment_transformer"]
+                for article in analyzed_articles.values()
+            ]
 
-        #     sentiment_metrics = calculate_sentiment_metrics(
-        #         ground_truth_sentiment, predicted_sentiment
-        #     )
-        #     logger.info("Sentiment metrics calculated.")
-        # except KeyError:
-        #     logger.error("Unable to calculate sentiment analysis metrics")
-        #     sentiment_metrics = None
+            sentiment_metrics = calculate_sentiment_metrics(
+                ground_truth_sentiment, predicted_sentiment
+            )
+            logger.info("Sentiment metrics calculated.")
+        except KeyError:
+            logger.error("Unable to calculate sentiment analysis metrics")
+            sentiment_metrics = None
 
         # # Calculate keyword extraction metrics
-        # logger.info("Calculating keyword extraction metrics...")
-        # try:
-        #     reference_keywords = [
-        #         article["keywords_spacy"] for article in analyzed_articles.values()
-        #     ]
-        #     extracted_keywords = [
-        #         article["keywords_rake"] for article in analyzed_articles.values()
-        #     ]
-        #     keyword_extraction_metrics = calculate_keyword_extraction_metrics(
-        #         reference_keywords, extracted_keywords
-        #     )
-        #     logger.info("Keyword extraction metrics calculated.")
-        # except KeyError:
-        #     logger.error("Unable to calculate keyword extraction metrics.")
-        #     keyword_extraction_metrics = None
+        logger.info("Calculating keyword extraction metrics...")
+        try:
+            reference_keywords = [
+                article["keywords_spacy"] for article in analyzed_articles.values()
+            ]
+            extracted_keywords = [
+                article["keywords_rake"] for article in analyzed_articles.values()
+            ]
+            keyword_extraction_metrics = calculate_keyword_extraction_metrics(
+                reference_keywords, extracted_keywords
+            )
+            logger.info("Keyword extraction metrics calculated.")
+        except KeyError:
+            logger.error("Unable to calculate keyword extraction metrics.")
+            keyword_extraction_metrics = None
 
         # # Calculate summary generation metrics
-        # logger.info("Calculating summary generation metrics...")
-        # try:
-        #     reference_summaries = [
-        #         article["summary_spacy"] for article in analyzed_articles.values()
-        #     ]
-        #     generated_summaries = [
-        #         article["summary_transformer"] for article in analyzed_articles.values()
-        #     ]
-        #     summary_generation_metrics = calculate_summary_generation_metrics(
-        #         reference_summaries, generated_summaries
-        #     )
-        #     logger.info("Summary generation metrics calculated.")
-        # except KeyError:
-        #     logger.error("Unable to calculate summary generation metrics.")
-        #     summary_generation_metrics = None
+        logger.info("Calculating summary generation metrics...")
+        try:
+            reference_summaries = [
+                article["summary_spacy"] for article in analyzed_articles.values()
+            ]
+            generated_summaries = [
+                article["summary_transformer"] for article in analyzed_articles.values()
+            ]
+            summary_generation_metrics = calculate_summary_generation_metrics(
+                reference_summaries, generated_summaries
+            )
+            logger.info("Summary generation metrics calculated.")
+        except KeyError:
+            logger.error("Unable to calculate summary generation metrics.")
+            summary_generation_metrics = None
 
         # Store metrics in a dictionary
-        # metrics = {
-        #     "sentiment_metrics": sentiment_metrics,
-        #     "keyword_extraction_metrics": keyword_extraction_metrics,
-        #     "summary_generation_metrics": summary_generation_metrics,
-        # }
+        metrics = {
+            "sentiment_metrics": sentiment_metrics,
+            "keyword_extraction_metrics": keyword_extraction_metrics,
+            "summary_generation_metrics": summary_generation_metrics,
+        }
 
         # Write the analyzed articles and metrics to result.json
-        result = {
-            "analyzed_articles": analyzed_articles,
-            # "metrics": metrics
-        }
+        result = {"analyzed_articles": analyzed_articles, "metrics": metrics}
 
         try:
             script_directory = os.path.dirname(os.path.abspath(__file__))

@@ -37,7 +37,7 @@ class SummaryGenerationTestCase(unittest.TestCase):
             result = summarizer(
                 text,
                 max_length=config.MAX_SUMMARY_LENGTH,
-                min_length=config.MIN_LENGTH,
+                min_length=config.MIN_SUMMARY_LENGTH,
                 do_sample=False,
             )
             generated_summary = result[0]["summary_text"]

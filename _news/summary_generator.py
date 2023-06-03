@@ -15,7 +15,9 @@ class SummaryGenerator:
         self.nlp = spacy.load(Config.SPACY_MODEL)
         self.logger = logging.getLogger(__name__)
 
-    def generate_summary_transformer(self, text, target_ratio=0.3, max_summary_length=None):
+    def generate_summary_transformer(
+        self, text, target_ratio=0.3, max_summary_length=None
+    ):
         input_length = len(text)
         max_summary_length = max_summary_length or Config.MAX_SUMMARY_LENGTH
 
@@ -31,7 +33,9 @@ class SummaryGenerator:
             ]
             summaries = []
             for chunk in chunks:
-                chunk_max_length = min(int(len(chunk) * target_ratio), max_summary_length)
+                chunk_max_length = min(
+                    int(len(chunk) * target_ratio), max_summary_length
+                )
                 chunk_summary = self.transformer_summarizer(
                     chunk,
                     max_length=chunk_max_length,
@@ -44,10 +48,11 @@ class SummaryGenerator:
         self.logger.info("Summary generation completed.")
         return summary
 
-    def generate_summary_spacy(self, text, num_sentences=None):
+    def generate_summary_spacy(self, text):
         doc = self.nlp(text)
-        num_sentences = num_sentences or Config.NUM_SENTENCES
         sentences = [sent.text for sent in doc.sents]
-        summary = " ".join(sentences[:num_sentences])  # Generate summary using the specified number of sentences
+        summary = " ".join(
+            sentences
+        )  # Generate summary using the specified number of sentences
         self.logger.info("Spacy summary generation completed.")
         return summary
