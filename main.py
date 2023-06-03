@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
 import json
-import time
 import logging
 import os
 from config import Config
@@ -83,38 +82,39 @@ async def perform_live_analysis(loading_bar=None):
     try:
         # Fetch news articles
         logger.info("Fetching news articles...")
-        raw_urls = await fetch_news()  # Await fetch_news() function
+        # raw_urls = await fetch_news()  # Await fetch_news() function
         if loading_bar and loading_bar.cancelled:
             return
-        logger.info(f"Fetched {len(raw_urls)} news articles.")
+        # logger.info(f"Fetched {len(raw_urls)} news articles.")
 
         if loading_bar:
             loading_bar.update_progress(0, "Cleaning and validating URLs...")
 
         # Clean and validate URLs
         logger.info("Cleaning and validating URLs...")
-        cleaned_urls = await clean_urls(raw_urls)  # Await clean_urls() function
+        # cleaned_urls = await clean_urls(raw_urls)  # Await clean_urls() function
         if loading_bar and loading_bar.cancelled:
             return
-        logger.info(f"Cleaned and validated {len(cleaned_urls)} URLs.")
+        # logger.info(f"Cleaned and validated {len(cleaned_urls)} URLs.")
 
-        if loading_bar:
+        # if loading_bar:
             # Update total stages in loading bar
-            loading_bar.update_total_stages(len(cleaned_urls))
+            # loading_bar.update_total_stages(len(cleaned_urls))
 
         # Scrape and process articles
-        articles = []
-        for i, url in enumerate(cleaned_urls):
-            if loading_bar and loading_bar.cancelled:
-                return
-            if loading_bar:
-                loading_bar.increment_current_stage()
-            logger.info(f"Processing article {i + 1}/{len(cleaned_urls)}")
-            article = await scrape_and_process(
-                url, headers=HEADERS, exclude_list=EXCLUDE_LIST
-            )  # Await scrape_and_process() function
-            if article is not None:
-                articles.append(article)
+        # articles = []
+        articles = SAMPLE
+        # for i, url in enumerate(cleaned_urls):
+        #     if loading_bar and loading_bar.cancelled:
+        #         return
+        #     if loading_bar:
+        #         loading_bar.increment_current_stage()
+        #     logger.info(f"Processing article {i + 1}/{len(cleaned_urls)}")
+        #     article = await scrape_and_process(
+        #         url, headers=HEADERS, exclude_list=EXCLUDE_LIST
+        #     )  # Await scrape_and_process() function
+        #     if article is not None:
+        #         articles.append(article)
         if loading_bar:
             loading_bar.update_progress(100, "Performing analysis on articles...")
         logger.info(f"Performing analysis on {len(articles)} articles...")

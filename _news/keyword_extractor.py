@@ -3,7 +3,6 @@ import spacy
 from yake import KeywordExtractor as YakeKeywordExtractor
 from summa import keywords as summa_keyword_extractor
 from config import Config
-import torch
 from transformers import pipeline
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 import logging
@@ -11,7 +10,6 @@ import logging
 
 class KeywordExtractor:
     def __init__(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.rake = Rake(
             min_length=Config.RAKE_MIN_LENGTH,
             max_length=Config.RAKE_MAX_LENGTH,
@@ -46,9 +44,6 @@ class KeywordExtractor:
 
     def extract_keywords_huggingface(self, text):
         # Extract keywords using the Hugging Face model
-        self.logger.info(
-            f"Running sentiment classification with Transformer on device: {self.device}"
-        )
         results = self.transformer(text)
         keywords = [
             entity["word"]

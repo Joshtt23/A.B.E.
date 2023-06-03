@@ -2,12 +2,10 @@ from transformers import pipeline
 import spacy
 from config import Config
 import logging
-import torch
 
 
 class SummaryGenerator:
     def __init__(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.transformer_summarizer = pipeline(
             "summarization",
             model=Config.SUMMARY_MODEL,
@@ -17,10 +15,7 @@ class SummaryGenerator:
         self.nlp = spacy.load(Config.SPACY_MODEL)
         self.logger = logging.getLogger(__name__)
 
-    def generate_summary(self, text, target_ratio=0.3, max_summary_length=None):
-        self.logger.info(
-            f"Running sentiment classification with Transformer on device: {self.device}"
-        )
+    def generate_summary_transformer(self, text, target_ratio=0.3, max_summary_length=None):
         input_length = len(text)
         max_summary_length = max_summary_length or Config.MAX_SUMMARY_LENGTH
 
@@ -49,16 +44,10 @@ class SummaryGenerator:
         self.logger.info("Summary generation completed.")
         return summary
 
-    def generate_spacy(self, text, num_sentences=None):
+    def generate_summary_spacy(self, text, num_sentences=None):
         doc = self.nlp(text)
         num_sentences = num_sentences or Config.NUM_SENTENCES
         sentences = [sent.text for sent in doc.sents]
         summary = " ".join(sentences[:num_sentences])  # Generate summary using the specified number of sentences
         self.logger.info("Spacy summary generation completed.")
-        return summary
-
-    def generate_gensim(self, text, ratio=0.3):
-        # summary = gensim_summarize(text, ratio=ratio)
-        summary = "NOT IMPLEMENTED YET"
-        self.logger.info("Gensim summary generation completed.")
         return summary

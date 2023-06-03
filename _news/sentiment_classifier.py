@@ -3,12 +3,10 @@ from spacytextblob.spacytextblob import SpacyTextBlob
 import spacy
 from config import Config
 import logging
-import torch
 
 
 class SentimentClassifier:
     def __init__(self):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.classifier_model = pipeline(
             "text-classification",
             model=Config.SENTIMENT_ANALYSIS_MODEL,
@@ -16,7 +14,7 @@ class SentimentClassifier:
         )
         self.tokenizer = AutoTokenizer.from_pretrained(Config.SENTIMENT_ANALYSIS_MODEL)
         self.nlp = spacy.load(Config.SPACY_MODEL)
-        # self.nlp.add_pipe("spacytextblob")
+        self.nlp.add_pipe("spacytextblob")
         self.logger = logging.getLogger(__name__)
 
     @staticmethod
@@ -29,9 +27,6 @@ class SentimentClassifier:
             return "Neutral"
 
     def classify_sentiment_transformer(self, text):
-        self.logger.info(
-            f"Running sentiment classification with Transformer on device: {self.device}"
-        )
         max_length = self.tokenizer.model_max_length
         chunk_size = max_length - 2  # Account for special tokens [CLS] and [SEP]
         chunks = [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]
@@ -68,13 +63,9 @@ class SentimentClassifier:
 
     def classify_sentiment_spacy(self, text):
         doc = self.nlp(text)
-        # sentiment_spacy = {
-        #     "polarity": doc._.polarity,
-        #     "subjectivity": doc._.subjectivity,
-        # }
         sentiment_spacy = {
-            "polarity": 0.7,
-            "subjectivity": 0.3,
+            "polarity": doc._.blob.polarity,
+            "subjectivity": doc._.blob.subjectivity,
         }
         self.logger.info("Spacy sentiment classification completed.")
         return sentiment_spacy

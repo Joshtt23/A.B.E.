@@ -42,6 +42,7 @@ def ml_using_trnf(articles):
 
                 # Store the data for future retrieval
                 analyzed_articles[timestamp] = analyzed_data
+                logging.info(f"Finished processing for article {i + 1}/{len(articles)}")
 
     logging.info("Finished processing all articles.")
     return analyzed_articles
